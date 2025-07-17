@@ -1,0 +1,8 @@
+{
+  "pathWorkflow": "directory_of_the_workflow",
+  
+  "sample_list": "list_sample.txt",
+  "gvcf_paths": "sample_paths.tsv.gz",
+  
+  "num_batches": 100
+}
