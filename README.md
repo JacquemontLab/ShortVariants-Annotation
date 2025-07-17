@@ -198,7 +198,6 @@ if the first consequence is `missense_variant` → **Missense**
 
 ## Output format of **`snvDB_refined.parquet`**
 
-This file is located on Narval for SPARK_iWESv3 (N=142k) and on UKB-RAP for UKBB (N=460k)
 
 | Column name | Label | Description |
 |------------------|------------------|------------------------------------|
