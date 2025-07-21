@@ -2,6 +2,8 @@
 
 [Git Repository SNV-Annotation](https://github.com/JacquemontLab/SNV-Annotation.git)
 
+[![DOI](https://zenodo.org/badge/1021468027.svg)](https://doi.org/10.5281/zenodo.16268986)
+
 # Documentation of the SNV Annotation Pipeline
 
 This repository contains a bioinformatics pipeline for annotating SNVs on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
