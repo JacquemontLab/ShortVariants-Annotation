@@ -16,13 +16,13 @@ echo "🧬 Downloading VEP cache... (requires apptainer)"
 bash setup/requirement/vep_requirement/get_vep_docker.sh
 
 echo "🧠 Downloading AlphaMissense resources... (requires tabix)"
-bash setup/requirement/vep_requirement/get_alphamissense_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_alphamissense_ressources.sh
 
 echo "💥 Downloading LoFTEE resources..."
-bash setup/requirement/vep_requirement/get_loftee_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_loftee_ressources.sh
 
 echo "🧬 Downloading SpliceAI resources..."
-bash setup/requirement/vep_requirement/get_spliceai_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_spliceai_ressources.sh
 
 # ============================
 # System Requirements

@@ -330,7 +330,7 @@ rule run_vep_plugin_loftee:
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
-                --dir_cache={pathWorkflow} \
+                --dir_cache={pathVEPcache} \
                 --assembly GRCh38 \
                 --force_overwrite --compress_output gzip --tab \
                 --output_file {output.tsv_vep} \
@@ -425,7 +425,7 @@ rule run_vep_plugin_spliceai:
                 --force_overwrite --compress_output gzip --tab \
                 --output_file {output.tsv_vep} \
                 --stats_text --stats_html --stats_file {output.stat} \
-                --plugin SpliceAI,snv={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel={pathWorkflow}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
+                --plugin SpliceAI,snv={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
                 --fields "Uploaded_variation,Location,Allele,Gene,Feature,SpliceAI_pred" \
                 --verbose
         """

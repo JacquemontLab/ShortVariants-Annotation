@@ -14,13 +14,13 @@ echo "🧬 Downloading VEP cache... (requires apptainer)"
 bash setup/requirement/vep_requirement/get_vep_docker.sh
 
 echo "🧠 Downloading AlphaMissense resources... (requires tabix)"
-bash setup/requirement/vep_requirement/get_alphamissense_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_alphamissense_ressources.sh
 
 echo "💥 Downloading LoFTEE resources..."
-bash setup/requirement/vep_requirement/get_loftee_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_loftee_ressources.sh
 
 echo "🧬 Downloading SpliceAI resources..."
-bash setup/requirement/vep_requirement/get_spliceai_ressources.sh
+bash setup/requirement/vep_requirement/plugin/get_spliceai_ressources.sh
 
 
 cd SNV-Annotation/resources/vep_cache/
@@ -41,20 +41,5 @@ docker save ensemblorg/ensembl-vep:release_113.3 -o SNV-Annotation/resources/doc
 docker pull flobenhsj/genomics-tools_v1.0:latest
 docker save flobenhsj/genomics-tools_v1.0:latest -o SNV-Annotation/resources/dockers/genomics-tools_v1.0.tar
 
-# ============================
-# System Requirements
-# ============================
-
-echo "📦 Please ensure the following tools are installed and available in your PATH:"
-echo "  - apptainer"
-echo "  - bcftools"
-echo "  - vcftools"
-echo ""
-echo "🧪 You can check with:"
-echo "  which apptainer"
-echo "  which bcftools"
-echo "  which vcftools"
-
-echo "✅ Setup completed successfully."
 
 # Then the SNV-Annotation/ directory need to be saved on the bucket/project

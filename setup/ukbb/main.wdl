@@ -406,7 +406,6 @@ task RunVEPDefault {
     # Install pigz inside the container
     apt-get update && apt-get install -y pigz
 
-
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
     dx download "~{project}:SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
     mkdir assembly_GRCh38
@@ -733,7 +732,7 @@ task LossLessAnnotation {
 
     # Run the Spark-based lossless annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/lossless_annotation_v2.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
 
     # Compress the resulting lossless annotation parquet output directory
     tar --use-compress-program=pigz -cf "snvDB_lossless.parquet.tar.gz" "snvDB_lossless.parquet"
