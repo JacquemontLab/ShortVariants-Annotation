@@ -732,7 +732,13 @@ task LossLessAnnotation {
 
     # Run the Spark-based lossless annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
+    
+    mkdir -p /home/jupyter/tmp_spark
+    export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
+
     /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
+
+    rm -rf /home/jupyter/tmp_spark
 
     # Compress the resulting lossless annotation parquet output directory
     tar --use-compress-program=pigz -cf "snvDB_lossless.parquet.tar.gz" "snvDB_lossless.parquet"
@@ -771,8 +777,14 @@ task RefinedAnnotation {
 
     # Run Spark job to filter and summarize annotations
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
+    
+    mkdir -p /home/jupyter/tmp_spark
+    export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
+    
     /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "snvDB_refined_summary.txt" "snvDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
 
+    rm -rf /home/jupyter/tmp_spark
+    
     # Compress the resulting refined parquet directory into a tar.gz archive
     tar --use-compress-program=pigz -cf "snvDB_refined.parquet.tar.gz" "snvDB_refined.parquet"
 
@@ -787,8 +799,6 @@ task RefinedAnnotation {
     docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
     dx_instance_type: "mem3_ssd1_v2_x96"
   }
-  
-
 }
 
 
@@ -810,7 +820,7 @@ task ProduceSummaryPDF {
     # Unpack the lossless parquet archive into current directory
     tar --use-compress-program=pigz -xf ~{snvs_annotated_parquet}
 
-    python generate_pdf.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
+    python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
 
   >>>
 

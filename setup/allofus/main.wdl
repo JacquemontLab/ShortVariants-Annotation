@@ -214,7 +214,7 @@ task RunVEPDefault {
   }
       
   runtime {
-    docker: 'gcr.io/softwarepgc/vep113_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -271,7 +271,7 @@ task RunVEPLoftee {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/vep113_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -326,7 +326,7 @@ task RunVEPAlphamissense {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/vep113_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -382,7 +382,7 @@ task RunVEPSpliceAI {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/vep113_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -445,9 +445,9 @@ task LossLessAnnotation {
     File vep_default_parquet
     File parquet_including_all_snv
     Int cpu = 96
-    Int mem_per_cpu = 7
+    Int mem_per_cpu = 6
     Int boot_disk_gb = 5
-    Int disk_gb = 1000
+    Int disk_gb = 3000
   }
 
   # Extract base names without the ".tar.gz" suffix for referencing directories after unpacking
@@ -480,11 +480,16 @@ task LossLessAnnotation {
     # Run the Spark-based lossless annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
     
+    mkdir -p /home/jupyter/tmp_spark
+    export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
+    
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
           --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
 
+    rm -rf /home/jupyter/tmp_spark
+    
     # Compress the resulting lossless annotation parquet output directory
     tar --use-compress-program=pigz -cf "snvDB_lossless.parquet.tar.gz" "snvDB_lossless.parquet"
 
@@ -497,7 +502,7 @@ task LossLessAnnotation {
 
   runtime {
     docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
-    memory: (cpu * mem_per_cpu) + " GB"
+    memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
     cpu: cpu
@@ -509,9 +514,9 @@ task RefinedAnnotation {
   input {
     File lossless_parquet
     Int cpu = 96
-    Int mem_per_cpu = 7
+    Int mem_per_cpu = 6
     Int boot_disk_gb = 5
-    Int disk_gb = 500
+    Int disk_gb = 3000
   }
 
   String file_name = basename(lossless_parquet, ".tar.gz")
@@ -524,12 +529,17 @@ task RefinedAnnotation {
 
     # Run Spark job to filter and summarize annotations
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
+
+    mkdir -p /home/jupyter/tmp_spark
+    export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
     
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
           --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "snvDB_refined_summary.txt" "snvDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
 
+    rm -rf /home/jupyter/tmp_spark
+    
     # Compress the resulting refined parquet directory into a tar.gz archive
     tar --use-compress-program=pigz -cf "snvDB_refined.parquet.tar.gz" "snvDB_refined.parquet"
 
@@ -542,7 +552,7 @@ task RefinedAnnotation {
 
   runtime {
     docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
-    memory: (cpu * mem_per_cpu) + " GB"
+    memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
     cpu: cpu
@@ -555,7 +565,7 @@ task ProduceSummaryPDF {
   input {
     File snvs_annotated_parquet
     Int cpu = 96
-    Int mem_per_cpu = 7
+    Int mem_per_cpu = 6
     Int boot_disk_gb = 5
     Int disk_gb = 500
   }
@@ -563,11 +573,12 @@ task ProduceSummaryPDF {
   String file = basename(snvs_annotated_parquet, ".parquet.tar.gz")
 
   command <<<
+    set -euo pipefail
+
     # Unpack the lossless parquet archive into current directory
     tar --use-compress-program=pigz -xf ~{snvs_annotated_parquet}
 
-    python generate_pdf.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
-
+    python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
   >>>
 
   output {
@@ -576,7 +587,7 @@ task ProduceSummaryPDF {
   
   runtime {
     docker: 'gcr.io/softwarepgc/duckdb_python_v1.0:latest'
-    memory: (cpu * mem_per_cpu) + " GB"
+    memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
     cpu: cpu

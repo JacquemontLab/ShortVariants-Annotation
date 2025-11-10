@@ -55,8 +55,8 @@ SNV-Annotation/scripts/dataset_specific/from_hail_to_snv_AllOfUs.py
 ### 2. `FindUniqSNVsVCF`
 
 This step identifies unique SNVs across individuals for efficient annotation via VEP.
-Resources: **96 CPUs**, **747 GB RAM**
-Runtime: **XXXXh**
+Resources: **96 CPUs**, **384 GB RAM**
+Runtime: **1h**
 
 ---
 
@@ -65,10 +65,10 @@ Runtime: **XXXXh**
 To speed up annotation, VEP plugins are run independently and per chromosome.
 Each process is multithreaded. The four VEP steps are:
 
-* `RunVEPDefault`: **XXXXh**
-* `RunVEPLoftee`: **XXXXh**
-* `RunVEPAlphamissense`: **XXXXh**
-* `RunVEPSpliceAI`: **XXXXh**
+* `RunVEPDefault`: **1h**
+* `RunVEPLoftee`: **1h**
+* `RunVEPAlphamissense`: **1h**
+* `RunVEPSpliceAI`: **2h**
 
 > Note: The SpliceAI VEP cache is particularly large (\~91 GB).
 > These steps did not use excessive memory.
@@ -78,8 +78,8 @@ Each process is multithreaded. The four VEP steps are:
 ### 4. `ConvertVEPOutParquet`
 
 Each VEP output per chromosome is converted into a single Parquet file.
-Resources: **96 CPUs**, **369 GB RAM**
-Runtime: **XXXXh**
+Resources: **96 CPUs**, **384 GB RAM**
+Runtime: **1h**
 
 ---
 
@@ -87,8 +87,8 @@ Runtime: **XXXXh**
 
 This is the most resource-intensive step:
 
-* Resources: **96 CPUs**, **747 GB RAM**
-* Runtime: **XXXXh**
+* Resources: **96 CPUs**, **624 GB RAM**
+* Runtime: **7h**
 
 ---
 
@@ -96,5 +96,5 @@ This is the most resource-intensive step:
 
 Final annotation step:
 
-* Resources: **96 CPUs**, **747 GB RAM**
-* Runtime: **XXXXh**
+* Resources: **96 CPUs**, **624 GB RAM**
+* Runtime: **1h**

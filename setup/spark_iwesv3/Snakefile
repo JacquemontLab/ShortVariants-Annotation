@@ -475,8 +475,13 @@ rule lossless_annotation:
     shell:
         """
         source {path_venv}bin/activate
+    
+        mkdir -p /home/jupyter/tmp_spark
+        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
         /usr/bin/time -v python {pathScripts}lossless_annotation.py {input.parquet_including_all_snv} {input.vep_default_path} {params.plugin_files} {output.snvs_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+
+        rm -rf /home/jupyter/tmp_spark
         """
 
 
@@ -496,8 +501,14 @@ rule refined_annotation:
     shell:
         """
         source {path_venv}bin/activate
+    
+        mkdir -p /home/jupyter/tmp_spark
+        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
         /usr/bin/time -v python {pathScripts}refine_annotation.py {input.snvs_annotated_parquet} {output.summary_report} {output.refined_parquet} {resources.cpus} {resources.mem_per_cpu}
+        
+        rm -rf /home/jupyter/tmp_spark
+        
         """
 
 

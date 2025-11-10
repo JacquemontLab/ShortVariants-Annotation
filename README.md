@@ -14,9 +14,9 @@ As a result, three distinct pipelines are available (see the `setup` directory f
 
 * **SPARK** — runs on a computing cluster.
 * **UK Biobank (UKBB)** — uses the **UKB-RAP** platform.
-* **All of Us** — closely resembles the UKBB version but skips the first three steps.
+* **All of Us** — uses the **All of Us Researcher Workbench** platform - the pipeline closely resembles the UKBB version but skips the first three steps.
 
-The **All of Us** pipeline directly produces the **`Unannotated_SNVs.parquet`** file from a provided Hail table.
+The **All of Us** pipeline directly start by producing the **`Unannotated_SNVs.parquet`** file from a provided Hail table.
 
 ---
 
@@ -239,6 +239,10 @@ if the first consequence is `missense_variant` → **Missense**
 ## More Documentation
 Here are some useful links about the plugins used in this pipeline, provided by VEP (Variant Effect Predictor).
 
+### DOCKER
+
+We used several Docker containers; the corresponding Dockerfiles are available in the `resources/` directory.
+
 ### VEP
 
 [Ensembl VEP Options](https://useast.ensembl.org/info/docs/tools/vep/script/vep_options.html)\
@@ -255,3 +259,5 @@ Indeed the plugin resources used are provided for version **GRCh37**.
 - Resource requirements of each step must be adjusted depending on the quantity of data analyzed.
 
 - The workflow might differ regarding the different platform
+
+
