@@ -37,6 +37,8 @@ print("Number of CPUs allocated:", cpus)
 os.environ["JAVA_TOOL_OPTIONS"] = f"-Xmx{total_memory}g"
 
 spark_local_dirs = os.getenv("SPARK_LOCAL_DIRS")
+if not spark_local_dirs:  # catches both None and ""
+    sys.exit("Error: SPARK_LOCAL_DIRS environment variable is not set.")
 
 # Initialize Spark session
 spark = SparkSession.builder.appName("SPARK generate_schema_details") \
