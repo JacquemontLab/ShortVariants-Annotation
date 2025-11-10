@@ -8,7 +8,17 @@
 
 This repository contains a bioinformatics pipeline for annotating SNVs on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
 
-The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts. As a result, two distinct pipelines are available: one tailored for SPARK using a computing cluster, and another for UKBB using the UKB-RAP platform (see `setup` directory)
+The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts. 
+
+As a result, three distinct pipelines are available (see the `setup` directory for details):
+
+* **SPARK** — runs on a computing cluster.
+* **UK Biobank (UKBB)** — uses the **UKB-RAP** platform.
+* **All of Us** — uses the **All of Us Researcher Workbench** platform - the pipeline closely resembles the UKBB version but skips the first three steps.
+
+The **All of Us** pipeline directly start by producing the **`Unannotated_SNVs.parquet`** file from a provided Hail table.
+
+---
 
 
 ### 🔢 Pipeline Inputs
@@ -229,6 +239,10 @@ if the first consequence is `missense_variant` → **Missense**
 ## More Documentation
 Here are some useful links about the plugins used in this pipeline, provided by VEP (Variant Effect Predictor).
 
+### DOCKER
+
+We used several Docker containers; the corresponding Dockerfiles are available in the `resources/` directory.
+
 ### VEP
 
 [Ensembl VEP Options](https://useast.ensembl.org/info/docs/tools/vep/script/vep_options.html)\
@@ -245,3 +259,5 @@ Indeed the plugin resources used are provided for version **GRCh37**.
 - Resource requirements of each step must be adjusted depending on the quantity of data analyzed.
 
 - The workflow might differ regarding the different platform
+
+

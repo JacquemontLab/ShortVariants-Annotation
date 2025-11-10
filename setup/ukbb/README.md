@@ -4,6 +4,7 @@
 
 The `setup.sh` script helps you install all the required tools and resources on UKB-RAP.
 These resources need to be made available within your **DNAnexus project**.
+By reviewing each step, you can better understand how the Cromwell server accesses the necessary files and resources.
 
 Once you've updated the `String project = "project-XXXXXXXX"` line in `main.wdl` to reflect your project ID, you can compile the workflow from your local machine using:
 
@@ -119,8 +120,8 @@ Runtime: **15 min**
 
 This is the most resource-intensive step:
 
-* Runtime: **6h30**
 * Resources: **96 CPUs**, **747 GB RAM**
+* Runtime: **6h30**
 * Cost: **£25**
 
 ---
@@ -129,6 +130,6 @@ This is the most resource-intensive step:
 
 Final annotation step:
 
-* Runtime: **4h**
 * Resources: **96 CPUs**, **747 GB RAM**
+* Runtime: **4h**
 * Cost: **£14**

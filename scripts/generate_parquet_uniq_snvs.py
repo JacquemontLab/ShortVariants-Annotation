@@ -9,6 +9,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, split, regexp_extract, input_file_name, coalesce, lit
+import time
 from tqdm import tqdm  # Progress bar library
 
 
@@ -38,6 +39,9 @@ spark = SparkSession.builder.appName("SPARK generate_schema_details") \
 
 spark.sparkContext.setLogLevel("WARN")
 #######################################################
+
+# Start execution timer
+start_time = time.time()
 
 # Load the database
 pyspk = spark.read.parquet(parquet_input)
@@ -106,3 +110,9 @@ for chrom in tqdm(chromosomes, desc="Processing Chromosomes"):
     print(f"VCF file for chromosome {chrom} saved at: {final_vcf_path}")
     
 
+
+# End execution timer
+end_time = time.time()
+elapsed_time = end_time - start_time
+
+print(f"Total execution time: {elapsed_time:.2f} seconds")

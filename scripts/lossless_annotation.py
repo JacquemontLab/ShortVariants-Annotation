@@ -14,7 +14,6 @@ from pyspark.sql import functions as F
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, split, regexp_extract, input_file_name, lit, coalesce, when, expr, concat_ws
 import time
-import sys
 from tqdm import tqdm  # Progress bar library
 
 
@@ -24,10 +23,11 @@ vep_default_path = sys.argv[2]  # Path to default VEP annotations
 list_plugins = sys.argv[3].split(",")  # List of plugin Parquet files
 parquet_output = sys.argv[4]  # Output Parquet file path
 cpus = int(sys.argv[5])  # Number of CPUs
-mem_per_cpu = int(sys.argv[6])  # Memory per CPU (GB)
+mem_per_cpu = float(sys.argv[6])  # Memory per CPU (GB)
 
 ######################   Initialize Spark session   #################################
 total_memory = cpus * mem_per_cpu  # Total memory in GB based on CPU count
+total_memory = int(total_memory)   # Convert to integer to avoid float formatting issues
 
 # Print system resource allocation
 print("Total memory allocated (GB):", total_memory)
@@ -36,13 +36,24 @@ print("Number of CPUs allocated:", cpus)
 # Set Java memory options for Spark to avoid memory issues with large datasets
 os.environ["JAVA_TOOL_OPTIONS"] = f"-Xmx{total_memory}g"
 
+spark_local_dirs = os.getenv("SPARK_LOCAL_DIRS")
+if not spark_local_dirs:  # catches both None and ""
+    sys.exit("Error: SPARK_LOCAL_DIRS environment variable is not set.")
+
 # Initialize Spark session
 spark = SparkSession.builder.appName("SPARK generate_schema_details") \
-.config("spark.eventLog.gcMetrics.youngGenerationGarbageCollectors", "G1 Young Generation") \
-.config("spark.eventLog.gcMetrics.oldGenerationGarbageCollectors", "G1 Old Generation") \
-.config("spark.driver.cores", f"{cpus}") \
-.config("spark.driver.memory", f"{total_memory}g") \
-.getOrCreate()
+    .config("spark.local.dir", spark_local_dirs) \
+    .config("spark.driver.extraJavaOptions", f"-Djava.io.tmpdir={spark_local_dirs}") \
+    .config("spark.executor.extraJavaOptions", f"-Djava.io.tmpdir={spark_local_dirs}") \
+    .config("spark.eventLog.gcMetrics.youngGenerationGarbageCollectors", "G1 Young Generation") \
+    .config("spark.eventLog.gcMetrics.oldGenerationGarbageCollectors", "G1 Old Generation") \
+    .config("spark.driver.cores", f"{cpus}") \
+    .config("spark.driver.memory", f"{total_memory}g") \
+    .getOrCreate()
+
+# Optional: check settings
+print("spark.local.dir:", spark.conf.get("spark.local.dir"))
+print("JVM java.io.tmpdir:", spark.sparkContext._jvm.System.getProperty("java.io.tmpdir"))
 
 spark.sparkContext.setLogLevel("WARN")
 #######################################################
@@ -57,8 +68,9 @@ vep_annotation = spark.read.parquet(vep_default_path)
 
 ## Filtering on consequence of the MANE or CANONICAL, keeping only those that are not null MANE or not null CANONICAL
 vep_annotation = vep_annotation.filter(
-    (col("MANE").isNull()) & (col("CANONICAL").isNull())
+    (col("MANE").isNotNull()) | (col("CANONICAL").isNotNull())
 )
+
 
 # Load unannotated SNV database
 print("START READING", all_snvs_unannotated_path)

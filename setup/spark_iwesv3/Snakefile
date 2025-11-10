@@ -330,7 +330,7 @@ rule run_vep_plugin_loftee:
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
-                --dir_cache={pathWorkflow} \
+                --dir_cache={pathVEPcache} \
                 --assembly GRCh38 \
                 --force_overwrite --compress_output gzip --tab \
                 --output_file {output.tsv_vep} \
@@ -425,7 +425,7 @@ rule run_vep_plugin_spliceai:
                 --force_overwrite --compress_output gzip --tab \
                 --output_file {output.tsv_vep} \
                 --stats_text --stats_html --stats_file {output.stat} \
-                --plugin SpliceAI,snv={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel={pathWorkflow}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
+                --plugin SpliceAI,snv={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel={pathVEPcache}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
                 --fields "Uploaded_variation,Location,Allele,Gene,Feature,SpliceAI_pred" \
                 --verbose
         """
@@ -475,8 +475,13 @@ rule lossless_annotation:
     shell:
         """
         source {path_venv}bin/activate
+    
+        mkdir -p /home/jupyter/tmp_spark
+        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
         /usr/bin/time -v python {pathScripts}lossless_annotation.py {input.parquet_including_all_snv} {input.vep_default_path} {params.plugin_files} {output.snvs_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+
+        rm -rf /home/jupyter/tmp_spark
         """
 
 
@@ -496,8 +501,14 @@ rule refined_annotation:
     shell:
         """
         source {path_venv}bin/activate
+    
+        mkdir -p /home/jupyter/tmp_spark
+        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
         /usr/bin/time -v python {pathScripts}refine_annotation.py {input.snvs_annotated_parquet} {output.summary_report} {output.refined_parquet} {resources.cpus} {resources.mem_per_cpu}
+        
+        rm -rf /home/jupyter/tmp_spark
+        
         """
 
 
