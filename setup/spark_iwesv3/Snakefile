@@ -58,10 +58,10 @@ CHROMOSOMES = [f"chr{i}" for i in range(1, 23)] + ["chrX", "chrY"]  # List of ch
 
 rule all:
     input:
-        expand(pathResults  + "/Refined_Annotated_SNVs.parquet"),
-        expand(pathResults  + "/Lossless_Annotated_SNVs.parquet"),
-        expand(pathResults  + "/Refined_Annotated_SNVs_dictionary.pdf"),
-        expand(pathResults  + "/Lossless_Annotated_SNVs_dictionary.pdf")
+        expand(pathResults  + "/Refined_Annotated_ShortVariants.parquet"),
+        expand(pathResults  + "/Lossless_Annotated_ShortVariants.parquet"),
+        expand(pathResults  + "/Refined_Annotated_ShortVariants_dictionary.pdf"),
+        expand(pathResults  + "/Lossless_Annotated_ShortVariants_dictionary.pdf")
 
 
 
@@ -93,7 +93,7 @@ rule split_sample_list:
 rule produce_tsv_per_sample_SPARK:
     # This rule processes per-sample gVCF files for the SPARK dataset for a given batch.
     # It extracts SNPs, INDELs, and heterozygous sites from GATK and DeepVariant variant calls,
-    # retaining only shared SNVs while keeping DeepVariant metadata.
+    # retaining only shared short variants (SNVs and Indels) while keeping DeepVariant metadata.
     # The processed data is saved as a compressed TSV file for each sample.
     #
     # Note: This script does utilize multiple threads with GNU-parallel.
@@ -163,14 +163,14 @@ rule merge_tsv_parquet_by_batch:
     input: 
         batch_done = pathTempResults  + "data/processed/step/batch_{batch}_gvcf_produced"
     output:
-        parquet_including_all_snv = directory(pathTempResults + "data/processed/intermediate_parquet/batches/Unannotated_SNVs_batch_{batch}.parquet")
+        parquet_including_all_ShortVariants = directory(pathTempResults + "data/processed/intermediate_parquet/batches/Unannotated_ShortVariants_batch_{batch}.parquet")
     shell:
         """
         mkdir -p {pathTempResults}data/processed/intermediate_parquet/batches/
 
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}generate_parquet_all_snvs.py {params.dir_gvcf} {output.parquet_including_all_snv} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}generate_parquet_all_ShortVariants.py {params.dir_gvcf} {output.parquet_including_all_ShortVariants} {resources.cpus} {resources.mem_per_cpu}
         """
 
 
@@ -184,11 +184,11 @@ rule merge_batches:
         name = "merge_batches",
         stdout = pathLog + "merge_batches.stdout",
         stderr = pathLog + "merge_batches.stderr",
-        batches_files = ",".join(expand(pathTempResults + "data/processed/intermediate_parquet/batches/Unannotated_SNVs_batch_{i:04d}.parquet", i=range(NUM_BATCHES)))
+        batches_files = ",".join(expand(pathTempResults + "data/processed/intermediate_parquet/batches/Unannotated_ShortVariants_batch_{i:04d}.parquet", i=range(NUM_BATCHES)))
     input:
-        expand(pathTempResults  + "data/processed/intermediate_parquet/batches/Unannotated_SNVs_batch_{i:04d}.parquet", i=range(NUM_BATCHES))
+        expand(pathTempResults  + "data/processed/intermediate_parquet/batches/Unannotated_ShortVariants_batch_{i:04d}.parquet", i=range(NUM_BATCHES))
     output:
-        parquet_file = directory(pathTempResults  + "data/processed/Unannotated_SNVs.parquet")
+        parquet_file = directory(pathTempResults  + "data/processed/Unannotated_ShortVariants.parquet")
     shell:
         """
         source {path_venv}bin/activate
@@ -198,27 +198,27 @@ rule merge_batches:
 
 
 
-rule find_uniq_snvs_vcf:
-    # This rule extracts unique SNVs from a large Parquet file and generates chromosome-specific VCF files
+rule find_uniq_ShortVariants_vcf:
+    # This rule extracts unique short variants (SNVs and Indels) from a large Parquet file and generates chromosome-specific VCF files
     resources:
         time = "00-00:30:00", mem_per_cpu = 3, cpus = 64
     params:
-        name = "find_uniq_snvs_vcf",
-        stdout = pathLog + "find_uniq_snvs_vcf.stdout",
-        stderr = pathLog + "find_uniq_snvs_vcf.stderr",
-        output_dir = pathTempResults  + "data/processed/vcf_uniq_snvs/"
+        name = "find_uniq_ShortVariants_vcf",
+        stdout = pathLog + "find_uniq_ShortVariants_vcf.stdout",
+        stderr = pathLog + "find_uniq_ShortVariants_vcf.stderr",
+        output_dir = pathTempResults  + "data/processed/vcf_uniq_ShortVariants/"
     input: 
-        parquet_including_all_snv = pathTempResults  + "data/processed/Unannotated_SNVs.parquet"
+        parquet_including_all_ShortVariants = pathTempResults  + "data/processed/Unannotated_ShortVariants.parquet"
     output:
-        expand( pathTempResults  + "data/processed/vcf_uniq_snvs/{chrom}.vcf.gz", chrom=CHROMOSOMES)
+        expand( pathTempResults  + "data/processed/vcf_uniq_ShortVariants/{chrom}.vcf.gz", chrom=CHROMOSOMES)
     shell:
         """
-        mkdir -p {pathTempResults}data/processed/vcf_uniq_snvs/
-        rm -rf {pathTempResults}data/processed/vcf_uniq_snvs/*
+        mkdir -p {pathTempResults}data/processed/vcf_uniq_ShortVariants/
+        rm -rf {pathTempResults}data/processed/vcf_uniq_ShortVariants/*
 
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}generate_parquet_uniq_snvs.py {input.parquet_including_all_snv} {params.output_dir} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}generate_parquet_uniq_ShortVariants.py {input.parquet_including_all_ShortVariants} {params.output_dir} {resources.cpus} {resources.mem_per_cpu}
         
         # Check and load bcftools if missing
         if ! command -v bcftools &> /dev/null; then
@@ -236,7 +236,7 @@ rule find_uniq_snvs_vcf:
             echo "vcftools already available."
         fi
         
-        for file in {pathTempResults}data/processed/vcf_uniq_snvs/chr*.vcf; do
+        for file in {pathTempResults}data/processed/vcf_uniq_ShortVariants/chr*.vcf; do
             # Sort the VCF for faster VEP processing
             vcf-sort ${{file}} > ${{file%.vcf}}_sorted.vcf
 
@@ -254,7 +254,7 @@ rule find_uniq_snvs_vcf:
 
 
 rule run_vep_default:
-    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique SNVs using default parameters.
+    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique short variants (SNVs and Indels) using default parameters.
     # Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_*, gnomADg_*
     resources:
         time = "00-02:00:00", mem_per_cpu = 3, cpus = 64
@@ -263,7 +263,7 @@ rule run_vep_default:
         stdout = pathLog + "plugins/run_vep_default/{chrom}.stdout",
         stderr = pathLog + "plugins/run_vep_default/{chrom}.stderr",
     input: 
-        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_snvs/{chrom}.vcf.gz"
+        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_ShortVariants/{chrom}.vcf.gz"
     output:
         tsv_vep = pathTempResults  + "data/processed/vep_annotation/default/{chrom}.tsv.gz",
         stat = pathTempResults  + "data/processed/vep_annotation/default/{chrom}.txt",
@@ -299,7 +299,7 @@ rule run_vep_default:
 
 
 rule run_vep_plugin_loftee:
-    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of SNVs.
+    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of short variants (SNVs and Indels).
     resources:
         time = "00-01:00:00", mem_per_cpu = 3, cpus = 64
     params:
@@ -307,7 +307,7 @@ rule run_vep_plugin_loftee:
         stdout = pathLog + "plugins/run_vep_loftee/{chrom}.stdout",
         stderr = pathLog + "plugins/run_vep_loftee/{chrom}.stderr",
     input: 
-        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_snvs/{chrom}.vcf.gz"
+        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_ShortVariants/{chrom}.vcf.gz"
     output:
         tsv_vep = pathTempResults  + "data/processed/vep_annotation/loftee/{chrom}.tsv.gz",
         stat = pathTempResults  + "data/processed/vep_annotation/loftee/{chrom}.txt",
@@ -345,7 +345,7 @@ rule run_vep_plugin_loftee:
 
 
 rule run_vep_plugin_alphamissense:
-    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of SNVs.
+    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of short variants (SNVs and Indels).
     resources:
         time = "00-01:00:00", mem_per_cpu = 3, cpus = 64
     params:
@@ -353,7 +353,7 @@ rule run_vep_plugin_alphamissense:
         stdout = pathLog + "plugins/run_vep_alphamissense/{chrom}.stdout",
         stderr = pathLog + "plugins/run_vep_alphamissense/{chrom}.stderr",
     input: 
-        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_snvs/{chrom}.vcf.gz"
+        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_ShortVariants/{chrom}.vcf.gz"
     output:
         tsv_vep = pathTempResults  + "data/processed/vep_annotation/alphamissense/{chrom}.tsv.gz",
         stat = pathTempResults  + "data/processed/vep_annotation/alphamissense/{chrom}.txt",
@@ -389,7 +389,7 @@ rule run_vep_plugin_alphamissense:
 
 
 rule run_vep_plugin_spliceai:
-    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of SNVs.
+    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of short variants (SNVs and Indels).
     resources:
         time = "00-01:00:00", mem_per_cpu = 3, cpus = 64
     params:
@@ -397,7 +397,7 @@ rule run_vep_plugin_spliceai:
         stdout = pathLog + "plugins/run_vep_spliceai/{chrom}.stdout",
         stderr = pathLog + "plugins/run_vep_spliceai/{chrom}.stderr",
     input: 
-        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_snvs/{chrom}.vcf.gz"
+        vcf_to_annot = pathTempResults  + "data/processed/vcf_uniq_ShortVariants/{chrom}.vcf.gz"
     output:
         tsv_vep = pathTempResults  + "data/processed/vep_annotation/spliceai/{chrom}.tsv.gz",
         stat = pathTempResults  + "data/processed/vep_annotation/spliceai/{chrom}.txt",
@@ -458,7 +458,7 @@ rule convert_vep_out_parquet:
 
 
 rule lossless_annotation:
-    # This rule annotates all SNVs by merging unannotated SNVs with VEP default annotations and plugin-based annotations of unique SNVs.
+    # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
     resources:
         time = "00-07:00:00", mem_per_cpu = 30, cpus = 64
     params:
@@ -469,9 +469,9 @@ rule lossless_annotation:
     input:
         expand( pathTempResults  + "data/processed/intermediate_parquet/plugins/{plugin}.parquet", plugin=PLUGINS),
         vep_default_path = pathTempResults  + "data/processed/intermediate_parquet/plugins/default.parquet",
-        parquet_including_all_snv = pathTempResults  + "data/processed/Unannotated_SNVs.parquet"
+        parquet_including_all_ShortVariants = pathTempResults  + "data/processed/Unannotated_ShortVariants.parquet"
     output:
-        snvs_annotated_parquet = directory(pathResults  + "Lossless_Annotated_SNVs.parquet")
+        ShortVariants_annotated_parquet = directory(pathResults  + "Lossless_Annotated_ShortVariants.parquet")
     shell:
         """
         source {path_venv}bin/activate
@@ -479,7 +479,7 @@ rule lossless_annotation:
         mkdir -p /home/jupyter/tmp_spark
         export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
-        /usr/bin/time -v python {pathScripts}lossless_annotation.py {input.parquet_including_all_snv} {input.vep_default_path} {params.plugin_files} {output.snvs_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}lossless_annotation.py {input.parquet_including_all_ShortVariants} {input.vep_default_path} {params.plugin_files} {output.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
 
         rm -rf /home/jupyter/tmp_spark
         """
@@ -494,10 +494,10 @@ rule refined_annotation:
         stdout = pathLog + "refined_annotation.stdout",
         stderr = pathLog + "refined_annotation.stderr",
     input:
-        snvs_annotated_parquet = pathResults  + "Lossless_Annotated_SNVs.parquet"
+        ShortVariants_annotated_parquet = pathResults  + "Lossless_Annotated_ShortVariants.parquet"
     output:
-        summary_report = pathResults  + "Refined_Annotated_SNVs_summary.txt",
-        refined_parquet = directory(pathResults  + "Refined_Annotated_SNVs.parquet")
+        summary_report = pathResults  + "Refined_Annotated_ShortVariants_summary.txt",
+        refined_parquet = directory(pathResults  + "Refined_Annotated_ShortVariants.parquet")
     shell:
         """
         source {path_venv}bin/activate
@@ -505,7 +505,7 @@ rule refined_annotation:
         mkdir -p /home/jupyter/tmp_spark
         export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
-        /usr/bin/time -v python {pathScripts}refine_annotation.py {input.snvs_annotated_parquet} {output.summary_report} {output.refined_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}refine_annotation.py {input.ShortVariants_annotated_parquet} {output.summary_report} {output.refined_parquet} {resources.cpus} {resources.mem_per_cpu}
         
         rm -rf /home/jupyter/tmp_spark
         
@@ -522,12 +522,12 @@ rule produce_summary_pdf:
         stdout = pathLog + "produce_pdf_{file}.stdout",
         stderr = pathLog + "produce_pdf_{file}.stderr",
     input: 
-        snvs_annotated_parquet = pathResults  + "{file}.parquet"
+        ShortVariants_annotated_parquet = pathResults  + "{file}.parquet"
     output:
         pdf_file = pathResults  + "{file}_dictionary.pdf"
     shell:
         """
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}pdf_dictionnary.py {input.snvs_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}pdf_dictionnary.py {input.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
         """

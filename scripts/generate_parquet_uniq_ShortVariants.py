@@ -1,5 +1,5 @@
 # Florian Bénitière 16/03/2025
-# Script to find unique SNVs from a large .parquet file and produce VCF files per chromosome for use by VEP
+# Script to find unique short variants (SNVs and Indels) from a large .parquet file and produce VCF files per chromosome for use by VEP
 
 import os
 import sys

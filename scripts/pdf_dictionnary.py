@@ -11,21 +11,21 @@ from tqdm import tqdm
 import os
 from math import floor  # For rounding down numbers
 
-def generate_pdf_dictionary_duckdb(path_to_snv_dataset, total_memory):
-    output_file = path_to_snv_dataset.replace(".parquet", "_dictionary.pdf")
+def generate_pdf_dictionary_duckdb(path_to_ShortVariants_dataset, total_memory):
+    output_file = path_to_ShortVariants_dataset.replace(".parquet", "_dictionary.pdf")
 
-    if os.path.isfile(path_to_snv_dataset) and path_to_snv_dataset.endswith(".parquet"):
-        parquet_pattern = path_to_snv_dataset
-    elif os.path.isdir(path_to_snv_dataset):
+    if os.path.isfile(path_to_ShortVariants_dataset) and path_to_ShortVariants_dataset.endswith(".parquet"):
+        parquet_pattern = path_to_ShortVariants_dataset
+    elif os.path.isdir(path_to_ShortVariants_dataset):
         # Look for subdirectories
-        has_subdirs = any(os.path.isdir(os.path.join(path_to_snv_dataset, entry))
-                          for entry in os.listdir(path_to_snv_dataset))
+        has_subdirs = any(os.path.isdir(os.path.join(path_to_ShortVariants_dataset, entry))
+                          for entry in os.listdir(path_to_ShortVariants_dataset))
         if has_subdirs:
-            parquet_pattern = os.path.join(path_to_snv_dataset, "**/*.parquet")
+            parquet_pattern = os.path.join(path_to_ShortVariants_dataset, "**/*.parquet")
         else:
-            parquet_pattern = os.path.join(path_to_snv_dataset, "*.parquet")
+            parquet_pattern = os.path.join(path_to_ShortVariants_dataset, "*.parquet")
     else:
-        raise ValueError(f"Input path '{path_to_snv_dataset}' is neither a .parquet file nor a directory.")
+        raise ValueError(f"Input path '{path_to_ShortVariants_dataset}' is neither a .parquet file nor a directory.")
 
 
     # Open DuckDB connection
@@ -33,7 +33,7 @@ def generate_pdf_dictionary_duckdb(path_to_snv_dataset, total_memory):
     con.execute(f"SET memory_limit = '{total_memory}GB'")
     
     # Get column names and types
-    #schema = con.execute(f"DESCRIBE FROM read_parquet('{path_to_snv_dataset}/*/*.parquet')").fetchall()
+    #schema = con.execute(f"DESCRIBE FROM read_parquet('{path_to_ShortVariants_dataset}/*/*.parquet')").fetchall()
     schema = con.execute(f"DESCRIBE FROM read_parquet('{parquet_pattern}')").fetchall()
 
 

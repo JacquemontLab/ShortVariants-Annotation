@@ -66,27 +66,27 @@ first_file = True  # Flag to track first file processing
 
 for file in tqdm(subset_list_files, desc="Processing files", unit="file", miniters = math.ceil(len(subset_list_files) / 100)):
     # Read TSV file into Spark DataFrame with inferred schema
-    snv_type_data = spark.read.option("delimiter", "\t") \
+    ShortVariants_type_data = spark.read.option("delimiter", "\t") \
         .option("nullValue", "-") \
         .csv(file, header=True, inferSchema=True) \
         .withColumn("SampleID", regexp_extract(input_file_name(), r"/([^/]+).tsv.gz$", 1))  # Extract sample name
 
     # Reorder columns to place 'SampleID' first
-    new_column_order = ["SampleID"] + [c for c in snv_type_data.columns if c != "SampleID"]
-    snv_type_data = snv_type_data.select(new_column_order)
+    new_column_order = ["SampleID"] + [c for c in ShortVariants_type_data.columns if c != "SampleID"]
+    ShortVariants_type_data = ShortVariants_type_data.select(new_column_order)
     
     # Split AD column into REF_AD and ALT_AD
-    snv_type_data = snv_type_data.withColumn("REF_AD", split(col("AD"), ",")[0].cast("int")) \
+    ShortVariants_type_data = ShortVariants_type_data.withColumn("REF_AD", split(col("AD"), ",")[0].cast("int")) \
                                  .withColumn("ALT_AD", split(col("AD"), ",")[1].cast("int")) \
                                  .drop("AD")  # Drop original AD column if not needed
 
     # Write to Parquet file (overwrite for the first file, append for the rest)        
     if first_file:
-        snv_type_data.write.mode("overwrite").parquet(temp_parquet)
+        ShortVariants_type_data.write.mode("overwrite").parquet(temp_parquet)
         first_file = False
     else:
         # Save each file in append mode
-        snv_type_data.write.mode("append").parquet(temp_parquet)
+        ShortVariants_type_data.write.mode("append").parquet(temp_parquet)
 
 
 # End timing
@@ -98,9 +98,9 @@ print(f"Data successfully written to {temp_parquet}")
 print(f"Total execution time: {elapsed_time:.2f} seconds")
 
 # Reorganize final dataset by partitioning on 'CHROM'
-all_snvs_unannotated = spark.read.parquet(temp_parquet)
+all_ShortVariants_unannotated = spark.read.parquet(temp_parquet)
 
-all_snvs_unannotated.write \
+all_ShortVariants_unannotated.write \
     .mode("overwrite") \
     .partitionBy("CHROM") \
     .parquet(parquet_output)

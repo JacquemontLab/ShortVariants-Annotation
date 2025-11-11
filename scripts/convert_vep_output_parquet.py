@@ -76,7 +76,7 @@ start_time = time.time()
 for file in tqdm(subset_list_files, desc="Processing files", unit="file"):
     
     # Read each TSV file into a PySpark DataFrame, treating "-" as NULL
-    snv_type_data = (
+    ShortVariants_type_data = (
         spark.read.option("delimiter", "\t")
         .option("nullValue", "-")
         .option("comment", "#")
@@ -85,7 +85,7 @@ for file in tqdm(subset_list_files, desc="Processing files", unit="file"):
     )
     
     # Initialize merged DataFrame or merge with the existing one
-    merged_df = snv_type_data if merged_df is None else merged_df.unionByName(snv_type_data)
+    merged_df = ShortVariants_type_data if merged_df is None else merged_df.unionByName(ShortVariants_type_data)
 
 
 
@@ -106,12 +106,12 @@ if plugin == "spliceai":
     merged_df = merged_df.drop("SpliceAI_pred", "split_col")
     
 elif plugin == "alphamissense":
-    # Drop SNV if all columns are NULL
+    # Drop short variant if all columns are NULL
     condition = " OR ".join([f"{col} IS NOT NULL" for col in "am_class,am_pathogenicity".split(",")])
     merged_df = merged_df.filter(expr(condition))
     
 elif plugin == "loftee":
-    # Drop SNV if all columns are NULL
+    # Drop short variant if all columns are NULL
     condition = " OR ".join([f"{col} IS NOT NULL" for col in "LoF,LoF_filter,LoF_flags,LoF_info".split(",")])
     merged_df = merged_df.filter(expr(condition))
 

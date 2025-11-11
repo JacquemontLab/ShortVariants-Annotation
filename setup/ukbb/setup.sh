@@ -23,7 +23,7 @@ echo "🧬 Downloading SpliceAI resources..."
 bash setup/requirement/vep_requirement/plugin/get_spliceai_ressources.sh
 
 
-cd SNV-Annotation/resources/vep_cache/
+cd ShortVariants-Annotation/resources/vep_cache/
 
 tar -czvf ressources_alphamissense.tar.gz ressources_alphamissense
 tar -czvf ressources_loftee.tar.gz ressources_loftee
@@ -33,13 +33,13 @@ cd "$ORIG_DIR"
 # ============================
 # Dockers Requirements
 # ============================
-mkdir -p SNV-Annotation/resources/dockers/
+mkdir -p ShortVariants-Annotation/resources/dockers/
 
 docker pull ensemblorg/ensembl-vep:release_113.3
-docker save ensemblorg/ensembl-vep:release_113.3 -o SNV-Annotation/resources/dockers/ensembl-vep_113.3.tar
+docker save ensemblorg/ensembl-vep:release_113.3 -o ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar
 
 docker pull flobenhsj/genomics-tools_v1.0:latest
-docker save flobenhsj/genomics-tools_v1.0:latest -o SNV-Annotation/resources/dockers/genomics-tools_v1.0.tar
+docker save flobenhsj/genomics-tools_v1.0:latest -o ShortVariants-Annotation/resources/dockers/genomics-tools_v1.0.tar
 
 
-# Then the SNV-Annotation/ directory need to be saved on the bucket/project
+# Then the ShortVariants-Annotation/ directory need to be saved on the bucket/project

@@ -1,23 +1,23 @@
-%%writefile snvannotation.wdl
+%%writefile ShortVariantsannotation.wdl
 version 1.0
 
 workflow process_gvcf_by_batch {
 
   input {
-    File Unannotated_SNVs_parquet_compressed                   # Unannotated_SNVs obtained using HAIL
+    File Unannotated_ShortVariants_parquet_compressed                   # Unannotated_ShortVariants obtained using HAIL
     File homo_sapiens_vep_113_GRCh38_tar_gz                    # homo_sapiens_vep_113_GRCh38_tar_gz
     File ressources_spliceai_tar_gz                            # SpliceAI resources for VEP
     File ressources_alphamissense_tar_gz                       # AlphaMissense resources for VEP
     File ressources_loftee_tar_gz                              # LOFTEE resources for VEP
   }
 
-  call FindUniqSNVsVCF {
+  call FindUniqShortVariantsVCF {
     input:
-      parquet_including_all_snv = Unannotated_SNVs_parquet_compressed
+      parquet_including_all_ShortVariants = Unannotated_ShortVariants_parquet_compressed
   }
 
   # VEP Default Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPDefault {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -32,7 +32,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP SpliceAI Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPSpliceAI {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -48,7 +48,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP Alphamissense Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPAlphamissense {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -64,7 +64,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP LOFTEE Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPLoftee {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -87,7 +87,7 @@ workflow process_gvcf_by_batch {
         ConvertVEPOutLoftee.plugin_parquet_compressed
       ],
       vep_default_parquet = ConvertVEPOutDefault.plugin_parquet_compressed,
-      parquet_including_all_snv = Unannotated_SNVs_parquet_compressed
+      parquet_including_all_ShortVariants = Unannotated_ShortVariants_parquet_compressed
   }
 
   call RefinedAnnotation {
@@ -96,7 +96,7 @@ workflow process_gvcf_by_batch {
   }
 
   output {
-    Array[File] vcf_tarballs = FindUniqSNVsVCF.vcf_tarballs
+    Array[File] vcf_tarballs = FindUniqShortVariantsVCF.vcf_tarballs
     Array[File] vep_output_txt = RunVEPDefault.stat
     Array[File] vep_output_html = RunVEPDefault.stat_html
     Array[File] vep_output_tsv = RunVEPDefault.tsv_vep
@@ -109,10 +109,10 @@ workflow process_gvcf_by_batch {
 
 
 
-task FindUniqSNVsVCF {
-    # This rule extracts unique SNVs from a large Parquet file and generates chromosome-specific VCF files
+task FindUniqShortVariantsVCF {
+    # This rule extracts unique short variants (SNVs and Indels) from a large Parquet file and generates chromosome-specific VCF files
   input {
-    File parquet_including_all_snv             # list of .parquet.tar.gz files
+    File parquet_including_all_ShortVariants             # list of .parquet.tar.gz files
     Int cpu = 96
     Int mem_per_cpu = 4
     Int boot_disk_gb = 5
@@ -120,26 +120,26 @@ task FindUniqSNVsVCF {
   }
 
   # Derive file name by removing known suffix from filename
-  String parquet_name = basename(parquet_including_all_snv, ".tar.gz")
+  String parquet_name = basename(parquet_including_all_ShortVariants, ".tar.gz")
 
   command <<<
     set -euo pipefail
 
-    # Decompress the input archive (~{parquet_including_all_snv}) using pigz
-    tar --use-compress-program=pigz -xf ~{parquet_including_all_snv}
+    # Decompress the input archive (~{parquet_including_all_ShortVariants}) using pigz
+    tar --use-compress-program=pigz -xf ~{parquet_including_all_ShortVariants}
     
-    # Run PySpark script to generate per-chromosome VCFs of unique SNVs from the input Parquet
-    mkdir -p "data/processed/vcf_uniq_snvs/"
+    # Run PySpark script to generate per-chromosome VCFs of unique short variants (SNVs and Indels) from the input Parquet
+    mkdir -p "data/processed/vcf_uniq_ShortVariants/"
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
     
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
-          /usr/bin/generate_parquet_uniq_snvs.py ~{parquet_name} "data/processed/vcf_uniq_snvs/" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
+          /usr/bin/generate_parquet_uniq_ShortVariants.py ~{parquet_name} "data/processed/vcf_uniq_ShortVariants/" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
 
     
     # Post-process VCF files: sort, compress, index
-    for file in data/processed/vcf_uniq_snvs/chr*.vcf; do
+    for file in data/processed/vcf_uniq_ShortVariants/chr*.vcf; do
 
       chrom="${file%.vcf}"
       vcf-sort "$file" > "${chrom}_sorted.vcf"
@@ -156,7 +156,7 @@ task FindUniqSNVsVCF {
   >>>
 
   output {
-    Array[File] vcf_tarballs = glob("data/processed/vcf_uniq_snvs/*.vcf_bundle.tar.gz")
+    Array[File] vcf_tarballs = glob("data/processed/vcf_uniq_ShortVariants/*.vcf_bundle.tar.gz")
   }
 
   runtime {
@@ -170,7 +170,7 @@ task FindUniqSNVsVCF {
 
 
 task RunVEPDefault {
-    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique SNVs using default parameters.
+    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique short variants (SNVs and Indels) using default parameters.
     # Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_*, gnomADg_*
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
@@ -223,7 +223,7 @@ task RunVEPDefault {
 }
 
 task RunVEPLoftee {
-    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of SNVs.
+    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of short variants (SNVs and Indels).
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
     File homo_sapiens_vep_113_GRCh38_tar_gz # reference genome for VEP
@@ -280,7 +280,7 @@ task RunVEPLoftee {
 }
 
 task RunVEPAlphamissense {
-    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of SNVs.
+    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of short variants (SNVs and Indels).
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
     File homo_sapiens_vep_113_GRCh38_tar_gz # reference genome for VEP
@@ -335,7 +335,7 @@ task RunVEPAlphamissense {
 }
 
 task RunVEPSpliceAI {
-    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of SNVs.
+    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of short variants (SNVs and Indels).
     # Need at least 100 GB of Storage due to cache
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
@@ -439,11 +439,11 @@ task ConvertVEPOutParquet {
 }
 
 task LossLessAnnotation {
-    # This rule annotates all SNVs by merging unannotated SNVs with VEP default annotations and plugin-based annotations of unique SNVs.
+    # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
   input {
     Array[File] plugins_parquet             # list tsv
     File vep_default_parquet
-    File parquet_including_all_snv
+    File parquet_including_all_ShortVariants
     Int cpu = 96
     Int mem_per_cpu = 6
     Int boot_disk_gb = 5
@@ -452,7 +452,7 @@ task LossLessAnnotation {
 
   # Extract base names without the ".tar.gz" suffix for referencing directories after unpacking
   String file_vepdefault_name = basename(vep_default_parquet, ".tar.gz")
-  String file_allsnv_name = basename(parquet_including_all_snv, ".tar.gz")
+  String file_allShortVariants_name = basename(parquet_including_all_ShortVariants, ".tar.gz")
 
 
   command <<<
@@ -474,8 +474,8 @@ task LossLessAnnotation {
     # Unpack the VEP default annotation Parquet archive
     tar --use-compress-program=pigz -xf ~{vep_default_parquet}
 
-    # Unpack the Parquet archive containing all SNVs (raw input)
-    tar --use-compress-program=pigz -xf ~{parquet_including_all_snv}
+    # Unpack the Parquet archive containing all short variants (SNVs and Indels) (raw input)
+    tar --use-compress-program=pigz -xf ~{parquet_including_all_ShortVariants}
 
     # Run the Spark-based lossless annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
@@ -486,17 +486,17 @@ task LossLessAnnotation {
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
-          --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
+          --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allShortVariants_name} ~{file_vepdefault_name} "$plugin_files" "ShortVariantsDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
 
     rm -rf /home/jupyter/tmp_spark
     
     # Compress the resulting lossless annotation parquet output directory
-    tar --use-compress-program=pigz -cf "snvDB_lossless.parquet.tar.gz" "snvDB_lossless.parquet"
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_lossless.parquet.tar.gz" "ShortVariantsDB_lossless.parquet"
 
   >>>
 
   output {
-    File lossless_parquet_compressed = "snvDB_lossless.parquet.tar.gz"
+    File lossless_parquet_compressed = "ShortVariantsDB_lossless.parquet.tar.gz"
     File log_output = "output.log"
   }
 
@@ -536,18 +536,18 @@ task RefinedAnnotation {
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
-          --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "snvDB_refined_summary.txt" "snvDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
+          --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "ShortVariantsDB_refined_summary.txt" "ShortVariantsDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
 
     rm -rf /home/jupyter/tmp_spark
     
     # Compress the resulting refined parquet directory into a tar.gz archive
-    tar --use-compress-program=pigz -cf "snvDB_refined.parquet.tar.gz" "snvDB_refined.parquet"
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_refined.parquet.tar.gz" "ShortVariantsDB_refined.parquet"
 
   >>>
 
   output {
-    File summary_report = "snvDB_refined_summary.txt"
-    File refined_parquet = "snvDB_refined.parquet.tar.gz"
+    File summary_report = "ShortVariantsDB_refined_summary.txt"
+    File refined_parquet = "ShortVariantsDB_refined.parquet.tar.gz"
   }
 
   runtime {
@@ -563,20 +563,20 @@ task RefinedAnnotation {
 task ProduceSummaryPDF {
     # This rule produces a filtered parquet file commonly used for downstream analysis.
   input {
-    File snvs_annotated_parquet
+    File ShortVariants_annotated_parquet
     Int cpu = 96
     Int mem_per_cpu = 6
     Int boot_disk_gb = 5
     Int disk_gb = 500
   }
 
-  String file = basename(snvs_annotated_parquet, ".parquet.tar.gz")
+  String file = basename(ShortVariants_annotated_parquet, ".parquet.tar.gz")
 
   command <<<
     set -euo pipefail
 
     # Unpack the lossless parquet archive into current directory
-    tar --use-compress-program=pigz -xf ~{snvs_annotated_parquet}
+    tar --use-compress-program=pigz -xf ~{ShortVariants_annotated_parquet}
 
     python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
   >>>

@@ -1,12 +1,12 @@
 [![Jacquemont's Lab Header](labheader.png)](https://www.jacquemont-lab.org/)
 
-[Git Repository SNV-Annotation](https://github.com/JacquemontLab/SNV-Annotation.git)
+[Git Repository ShortVariants-Annotation](https://github.com/JacquemontLab/ShortVariants-Annotation.git)
 
 [![DOI](https://zenodo.org/badge/1021468027.svg)](https://doi.org/10.5281/zenodo.16268986)
 
-# Documentation of the SNV Annotation Pipeline
+# Documentation of the short variants (SNVs and Indels) Annotation Pipeline
 
-This repository contains a bioinformatics pipeline for annotating SNVs on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
+This repository contains a bioinformatics pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
 
 The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts. 
 
@@ -16,7 +16,7 @@ As a result, three distinct pipelines are available (see the `setup` directory f
 * **UK Biobank (UKBB)** — uses the **UKB-RAP** platform.
 * **All of Us** — uses the **All of Us Researcher Workbench** platform - the pipeline closely resembles the UKBB version but skips the first three steps.
 
-The **All of Us** pipeline directly start by producing the **`Unannotated_SNVs.parquet`** file from a provided Hail table.
+The **All of Us** pipeline directly start by producing the **`Unannotated_ShortVariants.parquet`** file from a provided Hail table.
 
 ---
 
@@ -97,7 +97,7 @@ This script performs the following tasks:
 
 
 ## Different Steps of the Pipeline
-This repository provides a Snakemake-based workflow for processing and annotating SNVs on human reference genome version **GRCh38**.
+This repository provides a Snakemake-based workflow for processing and annotating short variants (SNVs and Indels) on human reference genome version **GRCh38**.
 
 ### Workflow DAG
 Below is a graphical representation of the workflow:
@@ -137,16 +137,16 @@ The merging is done in two steps:
 
 2\. Merge of batches (**`merge_batches`**)
 
-This approach enables parallelization and significantly increases speed. The output file is **`Unannotated_SNVs.parquet`**.
+This approach enables parallelization and significantly increases speed. The output file is **`Unannotated_ShortVariants.parquet`**.
 
-### 4. Identifying Unique SNVs
+### 4. Identifying Unique short variants (SNVs and Indels)
 
-Unique SNVs are extracted to avoid redundant annotation during the VEP step.
-The output consists of VCF files per chromosome, used for VEP annotation (**`find_uniq_snvs_vcf`** step).
+Unique short variants are extracted to avoid redundant annotation during the VEP step.
+The output consists of VCF files per chromosome, used for VEP annotation (**`find_uniq_ShortVariants_vcf`** step).
 
 ### 5. VEP Annotation
 
-Each chromosome's unique SNVs are annotated using **VEP**. Different annotations:
+Each chromosome's unique short variants (SNVs and Indels) are annotated using **VEP**. Different annotations:
 
 -   **Default VEP annotation**: Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_, gnomADg_ (**`run_vep_default`**)
 
@@ -159,20 +159,20 @@ Each chromosome's unique SNVs are annotated using **VEP**. Different annotations
 ### 6. Reformatting VEP Output
 
 The VEP output is reformatted per plugin, for example **SpliceAI_pred** is split into separate columns, the maximum AF across gnomAD population is computed.
-Only unique SNVs with an annotation of the given plugin are retained, reducing file size and computation time (**`convert_vep_out_parquet`** rule).
+Only unique short variants (SNVs and Indels) with an annotation of the given plugin are retained, reducing file size and computation time (**`convert_vep_out_parquet`** rule).
 
 ### 7. Creating a Lossless Annotation
 
-This is the most resources consuming step, it merges **`Unannotated_SNVs.parquet`** with plugin annotations.
-The output is **`snvDB_lossless.parquet`**, partitioned by chromosome (**`lossless_annotation`** rule).
+This is the most resources consuming step, it merges **`Unannotated_ShortVariants.parquet`** with plugin annotations.
+The output is **`ShortVariantsDB_lossless.parquet`**, partitioned by chromosome (**`lossless_annotation`** rule).
 
 To reduce the size of the database, we removed:
 
--   **SNVs where either MANE or CANONICAL annotation is not null**
+-   **Short variants where either MANE or CANONICAL annotation is not null**
 
 ### 8. Refining Annotation
 
-This step filters data to generate a more relevant downstream dataset (**`refined_annotation`** rule). The dataset correspond to **`snvDB_refined.parquet`**.
+This step filters data to generate a more relevant downstream dataset (**`refined_annotation`** rule). The dataset correspond to **`ShortVariantsDB_refined.parquet`**.
 
 Key processing steps:
 
@@ -180,9 +180,9 @@ Key processing steps:
 
 -   **Compute Max_DS_SpliceAI**: `max(DS_AG, DS_AL, DS_DG, DS_DL)`
 
--   **Filter SNVs**: - DP \≥ 20 - GQ \≥ 30 - 0.2 \≤ AC_ratio \≤ 0.8
+-   **Filter short variants**: - DP \≥ 20 - GQ \≥ 30 - 0.2 \≤ AC_ratio \≤ 0.8
 
--   **Filter SNVs with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 and dataset_AF \≤ 0.001
+-   **Filter short variants with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 and dataset_AF \≤ 0.001
 
 -   **Identify Variant Types**:
 
@@ -208,7 +208,7 @@ if the first consequence is `missense_variant` → **Missense**
 
 **Missense** (am_pathogenicity ≥ 0.564 , 'likely_pathogenic')
 
-## Output format of **`snvDB_refined.parquet`**
+## Output format of **`ShortVariantsDB_refined.parquet`**
 
 
 | Column name | Label | Description |
@@ -228,7 +228,7 @@ if the first consequence is `missense_variant` → **Missense**
 | **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
 | **CANONICAL** | Canonical Transcript | Transcript is the canonical. |
 | **MANE** | Mane Transcript | Transcript is the MANE Select or MANE Plus Clinical transcript for the gene. |
-| **dataset_AF** | Dataset Allele Frequency | Number of individual having the SNV (after QC filter) / number of total individuals in the dataset. |
+| **dataset_AF** | Dataset Allele Frequency | Number of individual having the short variant (after QC filter) / number of total individuals in the dataset. |
 | **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
 | **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
 | **MAX_AF_POPS** | Populations with maximum allele frequency | Population in which was found MAX_AF. |

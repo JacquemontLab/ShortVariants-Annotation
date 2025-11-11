@@ -23,21 +23,21 @@ echo "🧬 Downloading SpliceAI resources..."
 bash setup/requirement/vep_requirement/plugin/get_spliceai_ressources.sh
 
 
-cd SNV-Annotation/resources/vep_cache/
+cd ShortVariants-Annotation/resources/vep_cache/
 
 tar -czvf ressources_alphamissense.tar.gz ressources_alphamissense
 tar -czvf ressources_loftee.tar.gz ressources_loftee
 tar -czvf ressources_spliceai.tar.gz ressources_spliceai
 
 
-# Then the SNV-Annotation/ directory need to be saved on the bucket/project
+# Then the ShortVariants-Annotation/ directory need to be saved on the bucket/project
 
-gsutil -m -u terra-user cp homo_sapiens_vep_113_GRCh38.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_SNV_annot_intermediate/SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz
+gsutil -m -u terra-user cp homo_sapiens_vep_113_GRCh38.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_ShortVariants_annot_intermediate/ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz
 
-gsutil -m -u terra-user cp ressources_loftee.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_SNV_annot_intermediate/SNV-Annotation/resources/vep_cache/ressources_loftee.tar.gz
+gsutil -m -u terra-user cp ressources_loftee.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_ShortVariants_annot_intermediate/ShortVariants-Annotation/resources/vep_cache/ressources_loftee.tar.gz
 
-gsutil -m -u terra-user cp ressources_alphamissense.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_SNV_annot_intermediate/SNV-Annotation/resources/vep_cache/ressources_alphamissense.tar.gz
+gsutil -m -u terra-user cp ressources_alphamissense.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_ShortVariants_annot_intermediate/ShortVariants-Annotation/resources/vep_cache/ressources_alphamissense.tar.gz
 
-gsutil -m -u terra-user cp ressources_spliceai.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_SNV_annot_intermediate/SNV-Annotation/resources/vep_cache/ressources_spliceai.tar.gz
+gsutil -m -u terra-user cp ressources_spliceai.tar.gz gs://fc-secure-BUCKET_ID/UPSTREAM_ANALYSIS/AllofUs_tierv8_ShortVariants_annot_intermediate/ShortVariants-Annotation/resources/vep_cache/ressources_spliceai.tar.gz
 
 cd "$ORIG_DIR"

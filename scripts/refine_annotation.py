@@ -1,16 +1,16 @@
 # Florian Bénitière 16/03/2025
-# This script processes annotated SNV (Single Nucleotide Variant) data stored in Parquet format
+# This script processes annotated short variants (SNVs and Indels) data stored in Parquet format
 # using PySpark. It performs multiple steps including:
 # 
 # 1. **Chromosome-wise Processing**: Iterates over each chromosome to:
 #    - Convert SpliceAI scores to double precision.
-#    - Count unique individuals (SampleID) and SNVs.
+#    - Count unique individuals (SampleID) and short variants.
 #    - Apply quality control filters based on sequencing depth (DP), genotype quality (GQ), and allele balance (AC ratio).
 #    - Filter rare variants (Max AF ≤ 0.1%).
-#    - Annotate SNVs based on their predicted functional consequences.
+#    - Annotate short variants based on their predicted functional consequences.
 #    - Apply additional filtering for pathogenicity scores and SpliceAI predictions.
-# 2. **Data Export**: Saves the filtered SNV data to an output Parquet file, partitioned by chromosome.
-# 3. **Logging**: Generates a summary report detailing the number of SNVs retained at each stage.
+# 2. **Data Export**: Saves the filtered short variants data to an output Parquet file, partitioned by chromosome.
+# 3. **Logging**: Generates a summary report detailing the number of short variants retained at each stage.
 
 
 import os
@@ -36,7 +36,7 @@ from tqdm import tqdm  # Progress bar library
 
 
 # Parquet output path
-input_parquet_annotation = sys.argv[1]  # Path to unannotated SNV Parquet file
+input_parquet_annotation = sys.argv[1]  # Path to unannotated short variants Parquet file
 report_output = sys.argv[2]  # Path to default VEP annotations
 parquet_output = sys.argv[3]  # Output Parquet file path
 cpus = int(sys.argv[4])  # Number of CPUs
@@ -85,14 +85,14 @@ def write_to_file(file_path, text):
         file.write(text + '\n')
 
 
-write_to_file(report_output, "\n---- SNV Summary Report ----\n")
+write_to_file(report_output, "\n---- Short variants Summary Report ----\n")
 
 # Load Parquet file
-snv_annotated = spark.read.parquet(input_parquet_annotation)
-snv_annotated.printSchema()
+ShortVariants_annotated = spark.read.parquet(input_parquet_annotation)
+ShortVariants_annotated.printSchema()
 
 # Get the list of unique chromosomes
-chromosomes = snv_annotated.select("CHROM").distinct().rdd.flatMap(lambda x: x).collect()
+chromosomes = ShortVariants_annotated.select("CHROM").distinct().rdd.flatMap(lambda x: x).collect()
 
 # Start processing files
 start_time = time.time()
@@ -103,24 +103,24 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     
     write_to_file(report_output, f"\nProcessing Chromosome {chrom}...\n")
     # Filter by chromosome to reduce memory usage
-    snv_chrom = snv_annotated.filter(snv_annotated["CHROM"] == chrom)
+    ShortVariants_chrom = ShortVariants_annotated.filter(ShortVariants_annotated["CHROM"] == chrom)
     
-    # Count unique SNV SampleID
-    unique_iid_count = snv_chrom.select(countDistinct("SampleID")).collect()[0][0]
+    # Count unique short variants SampleID
+    unique_iid_count = ShortVariants_chrom.select(countDistinct("SampleID")).collect()[0][0]
 
-    # Count unique SNV ID
-    unique_snv_count = snv_chrom.select(countDistinct("ID")).collect()[0][0]
+    # Count unique short variants ID
+    unique_ShortVariants_count = ShortVariants_chrom.select(countDistinct("ID")).collect()[0][0]
 
-    # Count unique (SampleID, SNV_ID) pairs
-    unique_iid_snv_count = snv_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
+    # Count unique (SampleID, ShortVariants_ID) pairs
+    unique_iid_ShortVariants_count = ShortVariants_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
 
     # Summary for unique counts
     write_to_file(report_output, f"SampleID Count: {unique_iid_count}")
-    write_to_file(report_output, f"Unique SNV Count: {unique_snv_count}")
-    write_to_file(report_output, f"SNV Count: {unique_iid_snv_count}")
+    write_to_file(report_output, f"Unique ShortVariants Count: {unique_ShortVariants_count}")
+    write_to_file(report_output, f"ShortVariants Count: {unique_iid_ShortVariants_count}")
     
     # Assuring the double format for these specific variables of SpliceAI
-    snv_chrom = snv_chrom.withColumn("DS_AG", col("DS_AG").cast("double")) \
+    ShortVariants_chrom = ShortVariants_chrom.withColumn("DS_AG", col("DS_AG").cast("double")) \
        .withColumn("DS_AL", col("DS_AL").cast("double")) \
        .withColumn("DS_DG", col("DS_DG").cast("double")) \
        .withColumn("DS_DL", col("DS_DL").cast("double"))
@@ -129,60 +129,60 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     ### Call quality control filtering
 
     # Create AC ratio (ALT_AD / DP)
-    snv_chrom = snv_chrom.withColumn("AC_ratio", col("ALT_AD") / (col("DP")))
+    ShortVariants_chrom = ShortVariants_chrom.withColumn("AC_ratio", col("ALT_AD") / (col("DP")))
 
-    # Filter SNVs with DP >= 20 and GQ >= 30 and 0.2 <= AC_ratio <= 0.8
-    snv_chrom = snv_chrom.filter((snv_chrom.DP >= 20) & (snv_chrom.GQ >= 30) & (snv_chrom.AC_ratio >= 0.2) & (snv_chrom.AC_ratio <= 0.8) )
+    # Filter short variants with DP >= 20 and GQ >= 30 and 0.2 <= AC_ratio <= 0.8
+    ShortVariants_chrom = ShortVariants_chrom.filter((ShortVariants_chrom.DP >= 20) & (ShortVariants_chrom.GQ >= 30) & (ShortVariants_chrom.AC_ratio >= 0.2) & (ShortVariants_chrom.AC_ratio <= 0.8) )
 
-    # Count unique (SampleID, SNV_ID) pairs
-    unique_iid_snv_count_qc = snv_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
+    # Count unique (SampleID, ShortVariants_ID) pairs
+    unique_iid_ShortVariants_count_qc = ShortVariants_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
 
     # Summary for QC counts
-    write_to_file(report_output, f"\nSNV Count after QC (DP >= 20 and GQ >= 30 and 0.2 <= AC_ratio <= 0.8): {unique_iid_snv_count_qc}\n")
+    write_to_file(report_output, f"\nShort variants Count after QC (DP >= 20 and GQ >= 30 and 0.2 <= AC_ratio <= 0.8): {unique_iid_ShortVariants_count_qc}\n")
 
 
 
     # Compute dataset_AF Group by variant and count distinct SampleIDs
-    variant_iid_counts = snv_chrom.groupBy("POS", "REF", "ALT") \
+    variant_iid_counts = ShortVariants_chrom.groupBy("POS", "REF", "ALT") \
         .agg((countDistinct("SampleID") / lit(unique_iid_count)).alias("dataset_AF"))
     
     # Join back to original data
-    snv_chrom = snv_chrom.join(variant_iid_counts, on=["POS", "REF", "ALT"], how="left")
+    ShortVariants_chrom = ShortVariants_chrom.join(variant_iid_counts, on=["POS", "REF", "ALT"], how="left")
 
 
     ### Rare variant filtering
 
-    # Filter SNVs with gnomAD_max_AF <= 0.1%
-    snv_chrom = snv_chrom.filter((snv_chrom.gnomAD_max_AF <= 0.001) & (snv_chrom.dataset_AF <= 0.001) )
+    # Filter short variants with gnomAD_max_AF <= 0.1%
+    ShortVariants_chrom = ShortVariants_chrom.filter((ShortVariants_chrom.gnomAD_max_AF <= 0.001) & (ShortVariants_chrom.dataset_AF <= 0.001) )
 
-    # Count unique (SampleID, SNV_ID) pairs
-    unique_iid_snv_count_qc_rare = snv_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
+    # Count unique (SampleID, ShortVariants_ID) pairs
+    unique_iid_ShortVariants_count_qc_rare = ShortVariants_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
 
     # Summary for rare variant counts
-    write_to_file(report_output, f"\nSNV Count after Rare Variant QC (gnomAD_max_AF & dataset_AF <= 0.001): {unique_iid_snv_count_qc_rare}\n")
+    write_to_file(report_output, f"\nShort variants Count after Rare Variant QC (gnomAD_max_AF & dataset_AF <= 0.001): {unique_iid_ShortVariants_count_qc_rare}\n")
 
-    snv_chrom.printSchema()
+    ShortVariants_chrom.printSchema()
 
     # Extract the first string before a comma in the 'Consequence' column
-    snv_chrom = snv_chrom.withColumn("First_Consequence", split(snv_chrom["Consequence"], ",")[0])
+    ShortVariants_chrom = ShortVariants_chrom.withColumn("First_Consequence", split(ShortVariants_chrom["Consequence"], ",")[0])
 
     # Annotate Variant Type
-    snv_chrom = snv_chrom.withColumn(
+    ShortVariants_chrom = ShortVariants_chrom.withColumn(
         "Variant_Type",
-        when(snv_chrom["Consequence"] == "synonymous_variant", "Synonymous")
-        .when(snv_chrom["First_Consequence"] == "stop_gained", "Stop_Gained")
-        .when(snv_chrom["First_Consequence"] == "frameshift_variant", "Frameshift")
-        .when(snv_chrom["First_Consequence"] == "splice_acceptor_variant", "Splice_variants")
-        .when(snv_chrom["First_Consequence"] == "splice_donor_variant", "Splice_variants")
-        .when(snv_chrom["First_Consequence"] == "missense_variant", "Missense")
+        when(ShortVariants_chrom["Consequence"] == "synonymous_variant", "Synonymous")
+        .when(ShortVariants_chrom["First_Consequence"] == "stop_gained", "Stop_Gained")
+        .when(ShortVariants_chrom["First_Consequence"] == "frameshift_variant", "Frameshift")
+        .when(ShortVariants_chrom["First_Consequence"] == "splice_acceptor_variant", "Splice_variants")
+        .when(ShortVariants_chrom["First_Consequence"] == "splice_donor_variant", "Splice_variants")
+        .when(ShortVariants_chrom["First_Consequence"] == "missense_variant", "Missense")
         .otherwise("Other")
     )
 
     # Count occurrences of each Variant_Type
-    variant_type_counts = snv_chrom.groupBy("Variant_Type").count()
+    variant_type_counts = ShortVariants_chrom.groupBy("Variant_Type").count()
 
     # Filter the data for "Other" variant type
-    other_variant_df = snv_chrom.filter(snv_chrom["Variant_Type"] == "Other")
+    other_variant_df = ShortVariants_chrom.filter(ShortVariants_chrom["Variant_Type"] == "Other")
 
     # Count occurrences of each Consequence within the "Other" Variant_Type
     consequence_counts = other_variant_df.groupBy("Consequence").count()
@@ -196,7 +196,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
         write_to_file(report_output, f"{row['Variant_Type']}: {row['count']}")
 
     # Create a new column 'Max_DS' with the maximum value of DS_AG, DS_AL, DS_DG, and DS_DL
-    snv_chrom = snv_chrom.withColumn(
+    ShortVariants_chrom = ShortVariants_chrom.withColumn(
         "Max_DS_SpliceAI",
         greatest(
             col("DS_AG"),
@@ -207,18 +207,18 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     )
 
     # Filter conditions:
-    snv_chrom = snv_chrom.filter(
-        ((snv_chrom["Variant_Type"].isin("Stop_Gained", "Frameshift")) & (snv_chrom["LoF"].isin("HC"))) |
-        ((snv_chrom["Variant_Type"].isin("Splice_variants")) & (snv_chrom["Max_DS_SpliceAI"] >= 0.8)) |
-        ((snv_chrom["Variant_Type"].isin("Missense")) & (snv_chrom["am_pathogenicity"] >= 0.564)) |
-        (snv_chrom["Variant_Type"].isin("Synonymous"))
+    ShortVariants_chrom = ShortVariants_chrom.filter(
+        ((ShortVariants_chrom["Variant_Type"].isin("Stop_Gained", "Frameshift")) & (ShortVariants_chrom["LoF"].isin("HC"))) |
+        ((ShortVariants_chrom["Variant_Type"].isin("Splice_variants")) & (ShortVariants_chrom["Max_DS_SpliceAI"] >= 0.8)) |
+        ((ShortVariants_chrom["Variant_Type"].isin("Missense")) & (ShortVariants_chrom["am_pathogenicity"] >= 0.564)) |
+        (ShortVariants_chrom["Variant_Type"].isin("Synonymous"))
     )
 
     # Show the filtered result
-    snv_chrom.show()
+    ShortVariants_chrom.show()
 
     # Count occurrences of each Variant_Type
-    variant_type_counts = snv_chrom.groupBy("Variant_Type").count()
+    variant_type_counts = ShortVariants_chrom.groupBy("Variant_Type").count()
 
     # Write the Variant Type Counts before filtering to file
     write_to_file(report_output, "\nVariant Type Counts After Filtering:")
@@ -234,17 +234,17 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
         "Variant_Type", "am_pathogenicity", "Max_DS_SpliceAI"
     ]
 
-    snv_chrom = snv_chrom.select(columns_to_keep)
+    ShortVariants_chrom = ShortVariants_chrom.select(columns_to_keep)
 
     # Write to Parquet file (overwrite for the first file, append for the rest)
     if first_file:
-        snv_chrom.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
+        ShortVariants_chrom.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
         first_file = False
     else:
         # Save each file in append mode
-        snv_chrom.write.partitionBy("CHROM").mode("append").parquet( parquet_output )
-    snv_chrom.unpersist()
+        ShortVariants_chrom.write.partitionBy("CHROM").mode("append").parquet( parquet_output )
+    ShortVariants_chrom.unpersist()
 
-snv_chrom.printSchema()
+ShortVariants_chrom.printSchema()
 # Final summary report
 write_to_file(report_output, "\n--- End Summary ---")

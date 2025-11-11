@@ -11,10 +11,10 @@ Once you've updated the `String project = "project-XXXXXXXX"` line in `main.wdl`
 ```bash
 java -jar dxCompiler-2.13.0.jar compile main.wdl \
   -project project-XXXXXXXXXXX \
-  -folder /snv_annotation/
+  -folder /ShortVariants_annotation/
 ```
 
-This will register the WDL as a **workflow** in your UKB-RAP DNAnexus project under the `/snv_annotation/` folder.
+This will register the WDL as a **workflow** in your UKB-RAP DNAnexus project under the `/ShortVariants_annotation/` folder.
 
 > ✅ You can then launch the workflow directly from the UKB-RAP interface or via the CLI.
 
@@ -84,9 +84,9 @@ Cost: **£7**
 
 ---
 
-### 5. `FindUniqSNVsVCF`
+### 5. `FindUniqShortVariantsVCF`
 
-This step identifies unique SNVs across individuals for efficient annotation via VEP.
+This step identifies unique short variants (SNVs and Indels) across individuals for efficient annotation via VEP.
 Resources: **96 CPUs**, **747 GB RAM**
 Runtime: **2h**
 Cost: **£10**

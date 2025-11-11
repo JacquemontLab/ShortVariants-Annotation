@@ -1,6 +1,6 @@
 # Florian Bénitière - 21/03/2025
 # This script processes unique SPARK gVCF files to filter SNPs, INDELs, and non-homozygous ref sites.
-# It then retains only SNVs that intersect between GATK and DeepVariant, preserving DeepVariant metadata in the output.
+# It then retains only short variants (SNVs and Indels) that intersect between GATK and DeepVariant, preserving DeepVariant metadata in the output.
 
 #!/bin/bash
 

@@ -30,7 +30,7 @@ The memory and CPU allocation for each step are defined in the `runtime` section
 For **All of Us**, we skip the first three original steps and replace them with a **manual extraction step** using the `Hail Genomics Analysis` environment in Jupyter, which leverages a **Dataproc cluster** for scalability.
 
 
-#### 1. `from_hail_to_SNV`
+#### 1. `from_hail_to_ShortVariants`
 
 We use the Hail table:
 
@@ -46,15 +46,15 @@ From this table, we extract the following fields for each variant:
 This extraction is performed using the script:
 
 ```
-SNV-Annotation/scripts/dataset_specific/from_hail_to_snv_AllOfUs.py
+ShortVariants-Annotation/scripts/dataset_specific/from_hail_to_ShortVariants_AllOfUs.py
 ```
 
 ---
 
 
-### 2. `FindUniqSNVsVCF`
+### 2. `FindUniqShortVariantsVCF`
 
-This step identifies unique SNVs across individuals for efficient annotation via VEP.
+This step identifies unique short variants (SNVs and Indels) across individuals for efficient annotation via VEP.
 Resources: **96 CPUs**, **384 GB RAM**
 Runtime: **1h**
 

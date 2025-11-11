@@ -58,7 +58,7 @@ tbl_small.head(2).show()
 start_time = time.time()
 # Save as Parquet
 
-output_file="gs://fc-secure-af0d21bb-d24b-4548-8b67-48ee7f4cbc56/UPSTREAM_ANALYSIS/AllofUs_tierv8_SNV_annot_intermediate/processed/Unannotated_SNVs_intermediate"
+output_file="gs://fc-secure-af0d21bb-d24b-4548-8b67-48ee7f4cbc56/UPSTREAM_ANALYSIS/AllofUs_tierv8_ShortVariants_annot_intermediate/processed/Unannotated_ShortVariants_intermediate"
 
 tbl.to_spark().write.parquet(output_file + ".parquet")
 
@@ -82,8 +82,8 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Input and output paths
-input_path = "Unannotated_SNVs_intermediate.parquet"
-output_path = "Unannotated_SNVs.parquet"
+input_path = "Unannotated_ShortVariants_intermediate.parquet"
+output_path = "Unannotated_ShortVariants.parquet"
 
 # Read the Parquet dataset (can be a directory)
 df = spark.read.parquet(input_path)

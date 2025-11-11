@@ -18,7 +18,7 @@ from tqdm import tqdm  # Progress bar library
 
 
 # Parquet output path
-all_snvs_unannotated_path = sys.argv[1]  # Path to unannotated SNV Parquet file
+all_ShortVariants_unannotated_path = sys.argv[1]  # Path to unannotated short variants (SNVs and Indels) Parquet file
 vep_default_path = sys.argv[2]  # Path to default VEP annotations
 list_plugins = sys.argv[3].split(",")  # List of plugin Parquet files
 parquet_output = sys.argv[4]  # Output Parquet file path
@@ -72,12 +72,12 @@ vep_annotation = vep_annotation.filter(
 )
 
 
-# Load unannotated SNV database
-print("START READING", all_snvs_unannotated_path)
-all_snvs_unannotated = spark.read.parquet(all_snvs_unannotated_path)
+# Load unannotated short variants (SNVs and Indels) database
+print("START READING", all_ShortVariants_unannotated_path)
+all_ShortVariants_unannotated = spark.read.parquet(all_ShortVariants_unannotated_path)
 
 # Get the list of unique chromosomes from the VCF dataframe
-chromosomes = all_snvs_unannotated.select("CHROM").distinct().rdd.flatMap(lambda x: x).collect()
+chromosomes = all_ShortVariants_unannotated.select("CHROM").distinct().rdd.flatMap(lambda x: x).collect()
 
 # Start processing files
 start_time = time.time()
@@ -86,7 +86,7 @@ first_file = True  # Flag to track first file processing
 for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     print(f"Processing chromosome {chrom}")
     
-    all_snvs_unannotated_chr = all_snvs_unannotated.filter(col("CHROM") == chrom)
+    all_ShortVariants_unannotated_chr = all_ShortVariants_unannotated.filter(col("CHROM") == chrom)
     vep_annotation_chr = vep_annotation.filter(col("Uploaded_variation") == chrom)
     
     # Columns to exclude from plugin files
@@ -99,7 +99,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
         vep_annotation_chr = vep_annotation_chr.join(plugins_parquet, on="ID", how="left")
     
     # Create an ID column by concatenating CHROM and POS, this part is difficult and his here to produce a shared ID with VEP output, because VEP reformat the ID
-    all_snvs_unannotated_chr = all_snvs_unannotated_chr.withColumn(
+    all_ShortVariants_unannotated_chr = all_ShortVariants_unannotated_chr.withColumn(
         "REF_mod",
         when((expr("LENGTH(REF) = 1") & (expr("LENGTH(ALT) > 1"))), lit(None))
         .when((expr("LENGTH(ALT) = 1") & (expr("LENGTH(REF) > 1"))), expr("SUBSTRING(REF, 2, LENGTH(REF))"))
@@ -122,50 +122,50 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     )
 
     # Create a unique variant ID column
-    all_snvs_unannotated_chr = all_snvs_unannotated_chr.withColumn("ID", concat_ws(":", col("CHROM"),concat_ws("-", col("START"), col("END")), col("ALT_mod")))
+    all_ShortVariants_unannotated_chr = all_ShortVariants_unannotated_chr.withColumn("ID", concat_ws(":", col("CHROM"),concat_ws("-", col("START"), col("END")), col("ALT_mod")))
     vep_annotation_chr = vep_annotation_chr.withColumn("ID", concat_ws(":", col("Location"), col("Allele")))
 
 
     # Identify shared and unique IDs between datasets
-    snvs_ids = all_snvs_unannotated_chr.select("ID")
+    ShortVariants_ids = all_ShortVariants_unannotated_chr.select("ID")
     vep_annot_ids = vep_annotation_chr.select("ID")
 
-    shared_ids = snvs_ids.intersect(vep_annot_ids)
-    unique_snvs = snvs_ids.subtract(vep_annot_ids)  # IDs unique to pyspk
-    unique_vep = vep_annot_ids.subtract(snvs_ids)  # IDs unique to snv_type_data
+    shared_ids = ShortVariants_ids.intersect(vep_annot_ids)
+    unique_ShortVariants = ShortVariants_ids.subtract(vep_annot_ids)  # IDs unique to pyspk
+    unique_vep = vep_annot_ids.subtract(ShortVariants_ids)  # IDs unique to ShortVariants_type_data
 
     # Count and print ID distribution
     num_shared = shared_ids.count()
-    num_unique_snvs = unique_snvs.count()
+    num_unique_ShortVariants = unique_ShortVariants.count()
     num_unique_vep = unique_vep.count()
 
     print(f"Shared IDs: {num_shared}")
-    print(f"Unique to SNVs: {num_unique_snvs}")
+    print(f"Unique to short variants: {num_unique_ShortVariants}")
     print(f"Unique to vep_annotation_chr: {num_unique_vep}")
 
 
-    # Merge annotations with SNVs
-    snvs_annotated_chr = all_snvs_unannotated_chr.join(vep_annotation_chr, on="ID", how="inner")
+    # Merge annotations with short variants
+    ShortVariants_annotated_chr = all_ShortVariants_unannotated_chr.join(vep_annotation_chr, on="ID", how="inner")
 
     # Drop useless columns
-    snvs_annotated_chr = snvs_annotated_chr.drop("REF_mod", "ALT_mod", "START", "END", "Uploaded_variation", "Location", "Allele")
+    ShortVariants_annotated_chr = ShortVariants_annotated_chr.drop("REF_mod", "ALT_mod", "START", "END", "Uploaded_variation", "Location", "Allele")
 
     # Write to Parquet file (overwrite for the first file, append for the rest)
     if first_file:
-        snvs_annotated_chr.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
+        ShortVariants_annotated_chr.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
         first_file = False
     else:
         # Save each file in append mode
-        snvs_annotated_chr.write.partitionBy("CHROM").mode("append").parquet(parquet_output)
+        ShortVariants_annotated_chr.write.partitionBy("CHROM").mode("append").parquet(parquet_output)
 
 
-    print(f"Number of total SNVs: {snvs_annotated_chr.count()}")
-    print(f"Number of total SNVs after VEP Annotation: {snvs_annotated_chr.count()}")
+    print(f"Number of total short variants: {ShortVariants_annotated_chr.count()}")
+    print(f"Number of total short variants after VEP Annotation: {ShortVariants_annotated_chr.count()}")
     
     # Unpersist memory
-    all_snvs_unannotated_chr.unpersist()
+    all_ShortVariants_unannotated_chr.unpersist()
     vep_annotation_chr.unpersist()
-    snvs_annotated_chr.unpersist()
+    ShortVariants_annotated_chr.unpersist()
     
 
 # End execution timer

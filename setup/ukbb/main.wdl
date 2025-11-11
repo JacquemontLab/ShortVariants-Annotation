@@ -40,13 +40,13 @@ workflow process_gvcf_by_batch {
       batches_files = MergeTSVParquetByBatch.parquet_compressed
   }
 
-  call FindUniqSNVsVCF {
+  call FindUniqShortVariantsVCF {
     input:
-      parquet_including_all_snv = MergeBatches.unannotated_parquet_compressed
+      parquet_including_all_ShortVariants = MergeBatches.unannotated_parquet_compressed
   }
 
   # VEP Default Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPDefault {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -61,7 +61,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP SpliceAI Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPSpliceAI {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -76,7 +76,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP Alphamissense Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPAlphamissense {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -91,7 +91,7 @@ workflow process_gvcf_by_batch {
   }
 
   # VEP LOFTEE Plugin
-  scatter (vcf_to_annot in FindUniqSNVsVCF.vcf_tarballs) {
+  scatter (vcf_to_annot in FindUniqShortVariantsVCF.vcf_tarballs) {
     call RunVEPLoftee {
       input:
         vcf_to_annot = vcf_to_annot,
@@ -113,7 +113,7 @@ workflow process_gvcf_by_batch {
         ConvertVEPOutLoftee.plugin_parquet_compressed
       ],
       vep_default_parquet = ConvertVEPOutDefault.plugin_parquet_compressed,
-      parquet_including_all_snv = MergeBatches.unannotated_parquet_compressed
+      parquet_including_all_ShortVariants = MergeBatches.unannotated_parquet_compressed
   }
 
   call RefinedAnnotation {
@@ -126,7 +126,7 @@ workflow process_gvcf_by_batch {
     Array[File] batch_files = SplitSampleList.batch_files
     Array[File] parquet_archives = MergeTSVParquetByBatch.parquet_compressed
     File final_merged_parquet = MergeBatches.unannotated_parquet_compressed
-    Array[File] vcf_tarballs = FindUniqSNVsVCF.vcf_tarballs
+    Array[File] vcf_tarballs = FindUniqShortVariantsVCF.vcf_tarballs
     Array[File] vep_output_txt = RunVEPDefault.stat
     Array[File] vep_output_html = RunVEPDefault.stat_html
     Array[File] vep_output_tsv = RunVEPDefault.tsv_vep
@@ -204,13 +204,13 @@ task ProduceTSVPerSampleUKBB {
 
   command <<<
     # Download scripts and Docker image
-    dx download "~{project}:SNV-Annotation/resources/dockers/genomics-tools_v1.0.tar"
-    dx download "~{project}:SNV-Annotation/scripts/dataset_specific/extraction_snps_indels_UKBB.sh"
-    dx download "~{project}:SNV-Annotation/scripts/dataset_specific/produce_tsv_per_sample_UKBB.sh"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/genomics-tools_v1.0.tar"
+    dx download "~{project}:ShortVariants-Annotation/scripts/dataset_specific/extraction_snps_indels_UKBB.sh"
+    dx download "~{project}:ShortVariants-Annotation/scripts/dataset_specific/produce_tsv_per_sample_UKBB.sh"
     
     # Download reference genome
-    dx download "~{project}:SNV-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
-    dx download "~{project}:SNV-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz.gzi"
+    dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz.gzi"
     fasta_ref="GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
     # Load Docker image
@@ -269,7 +269,7 @@ task MergeTSVParquetByBatch {
 
     # Run the PySpark script to merge TSV files into one Parquet file:
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/generate_parquet_all_snvs.py "Archive_gvcf" "~{batch_id}.parquet" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/generate_parquet_all_ShortVariants.py "Archive_gvcf" "~{batch_id}.parquet" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
 
     # Compress the resulting Parquet file using pigz.
     tar --use-compress-program=pigz -cf "~{batch_id}.parquet.tar.gz" "~{batch_id}.parquet"
@@ -315,15 +315,15 @@ task MergeBatches {
 
     # Launch the PySpark script to merge all the found .parquet files into one
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/merge_parquets.py "$parquet_files" "Unannotated_SNVs.parquet" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/merge_parquets.py "$parquet_files" "Unannotated_ShortVariants.parquet" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
 
     # Compress the merged output parquet file using pigz
-    tar --use-compress-program=pigz -cf "Unannotated_SNVs.parquet.tar.gz" "Unannotated_SNVs.parquet"
+    tar --use-compress-program=pigz -cf "Unannotated_ShortVariants.parquet.tar.gz" "Unannotated_ShortVariants.parquet"
   >>>
 
 
   output {
-    File unannotated_parquet_compressed = "Unannotated_SNVs.parquet.tar.gz"
+    File unannotated_parquet_compressed = "Unannotated_ShortVariants.parquet.tar.gz"
   }
 
   runtime {
@@ -336,30 +336,30 @@ task MergeBatches {
 
 
 
-task FindUniqSNVsVCF {
-    # This rule extracts unique SNVs from a large Parquet file and generates chromosome-specific VCF files
+task FindUniqShortVariantsVCF {
+    # This rule extracts unique short variants (SNVs and Indels) from a large Parquet file and generates chromosome-specific VCF files
   input {
-    File parquet_including_all_snv             # list of .parquet.tar.gz files
+    File parquet_including_all_ShortVariants             # list of .parquet.tar.gz files
     Int cpu = 96             # default to 96 CPUs
     Int mem_per_cpu = 4     # default to 4 GB per CPU
   }
 
   # Derive file name by removing known suffix from filename
-  String parquet_name = basename(parquet_including_all_snv, ".tar.gz")
+  String parquet_name = basename(parquet_including_all_ShortVariants, ".tar.gz")
 
   command <<<
     set -euo pipefail
 
-    # Decompress the input archive (~{parquet_including_all_snv}) using pigz
-    tar --use-compress-program=pigz -xf ~{parquet_including_all_snv}
+    # Decompress the input archive (~{parquet_including_all_ShortVariants}) using pigz
+    tar --use-compress-program=pigz -xf ~{parquet_including_all_ShortVariants}
 
-    # Run PySpark script to generate per-chromosome VCFs of unique SNVs from the input Parquet
-    mkdir -p "data/processed/vcf_uniq_snvs/"
+    # Run PySpark script to generate per-chromosome VCFs of unique short variants (SNVs and Indels) from the input Parquet
+    mkdir -p "data/processed/vcf_uniq_ShortVariants/"
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/generate_parquet_uniq_snvs.py ~{parquet_name} "data/processed/vcf_uniq_snvs/" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/generate_parquet_uniq_ShortVariants.py ~{parquet_name} "data/processed/vcf_uniq_ShortVariants/" ~{cpu} ~{mem_per_cpu} 2>&1 | tee output.log
 
     # Post-process VCF files: sort, compress, index
-    for file in data/processed/vcf_uniq_snvs/chr*.vcf; do
+    for file in data/processed/vcf_uniq_ShortVariants/chr*.vcf; do
 
       chrom="${file%.vcf}"
       vcf-sort "$file" > "${chrom}_sorted.vcf"
@@ -377,7 +377,7 @@ task FindUniqSNVsVCF {
 
 
   output {
-    Array[File] vcf_tarballs = glob("data/processed/vcf_uniq_snvs/*.vcf_bundle.tar.gz")
+    Array[File] vcf_tarballs = glob("data/processed/vcf_uniq_ShortVariants/*.vcf_bundle.tar.gz")
   }
 
   runtime {
@@ -391,7 +391,7 @@ task FindUniqSNVsVCF {
 
 
 task RunVEPDefault {
-    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique SNVs using default parameters.
+    # This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique short variants (SNVs and Indels) using default parameters.
     # Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_*, gnomADg_*
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
@@ -407,12 +407,12 @@ task RunVEPDefault {
     apt-get update && apt-get install -y pigz
 
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
     mkdir assembly_GRCh38
     tar --use-compress-program=pigz -xf homo_sapiens_vep_113_GRCh38.tar.gz -C assembly_GRCh38
 
     # Download and load Docker image for Ensembl VEP
-    dx download "~{project}:SNV-Annotation/resources/dockers/ensembl-vep_113.3.tar"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar"
     docker load -i ensembl-vep_113.3.tar
 
     # Extract the input VCF file to annotate
@@ -453,7 +453,7 @@ task RunVEPDefault {
 
 
 task RunVEPLoftee {
-    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of SNVs.
+    # Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of short variants (SNVs and Indels).
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
     Int cpu = 72             # default to 4 CPUs
@@ -470,12 +470,12 @@ task RunVEPLoftee {
 
 
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
     mkdir assembly_GRCh38
     tar --use-compress-program=pigz -xf homo_sapiens_vep_113_GRCh38.tar.gz -C assembly_GRCh38
 
     # Download and load Docker image for Ensembl VEP
-    dx download "~{project}:SNV-Annotation/resources/dockers/ensembl-vep_113.3.tar"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar"
     docker load -i ensembl-vep_113.3.tar
 
     # Extract the input VCF file to annotate
@@ -483,7 +483,7 @@ task RunVEPLoftee {
 
     
     # Download LOFTEE resources
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/ressources_loftee.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/ressources_loftee.tar.gz"
     tar --use-compress-program=pigz -xf "ressources_loftee.tar.gz"
     
 
@@ -522,7 +522,7 @@ task RunVEPLoftee {
 
 
 task RunVEPAlphamissense {
-    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of SNVs.
+    # Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of short variants (SNVs and Indels).
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
     Int cpu = 72             # default to 4 CPUs
@@ -538,12 +538,12 @@ task RunVEPAlphamissense {
 
 
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
     mkdir assembly_GRCh38
     tar --use-compress-program=pigz -xf homo_sapiens_vep_113_GRCh38.tar.gz -C assembly_GRCh38
 
     # Download and load Docker image for Ensembl VEP
-    dx download "~{project}:SNV-Annotation/resources/dockers/ensembl-vep_113.3.tar"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar"
     docker load -i ensembl-vep_113.3.tar
 
     # Extract the input VCF file to annotate
@@ -551,7 +551,7 @@ task RunVEPAlphamissense {
 
 
     # Download AlphaMissense resources
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/ressources_alphamissense.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/ressources_alphamissense.tar.gz"
     tar --use-compress-program=pigz -xf "ressources_alphamissense.tar.gz"
 
 
@@ -586,7 +586,7 @@ task RunVEPAlphamissense {
 
 
 task RunVEPSpliceAI {
-    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of SNVs.
+    # Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of short variants (SNVs and Indels).
     # Need at least 100 GB of Storage due to cache
   input {
     File vcf_to_annot             # list of .parquet.tar.gz files
@@ -603,12 +603,12 @@ task RunVEPSpliceAI {
 
 
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
     mkdir assembly_GRCh38
     tar --use-compress-program=pigz -xf homo_sapiens_vep_113_GRCh38.tar.gz -C assembly_GRCh38
 
     # Download and load Docker image for Ensembl VEP
-    dx download "~{project}:SNV-Annotation/resources/dockers/ensembl-vep_113.3.tar"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar"
     docker load -i ensembl-vep_113.3.tar
 
     # Extract the input VCF file to annotate
@@ -616,7 +616,7 @@ task RunVEPSpliceAI {
 
 
     # Download SpliceAI resources
-    dx download "~{project}:SNV-Annotation/resources/vep_cache/ressources_spliceai.tar.gz"
+    dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/ressources_spliceai.tar.gz"
     tar --use-compress-program=pigz -xf "ressources_spliceai.tar.gz"
 
 
@@ -694,18 +694,18 @@ task ConvertVEPOutParquet {
 
 
 task LossLessAnnotation {
-    # This rule annotates all SNVs by merging unannotated SNVs with VEP default annotations and plugin-based annotations of unique SNVs.
+    # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
   input {
     Array[File] plugins_parquet             # list tsv
     File vep_default_parquet
-    File parquet_including_all_snv
+    File parquet_including_all_ShortVariants
     Int cpu = 96             # default to 96 CPUs
     Int mem_per_cpu = 7     # default to 4 GB per CPU
   }
 
   # Extract base names without the ".tar.gz" suffix for referencing directories after unpacking
   String file_vepdefault_name = basename(vep_default_parquet, ".tar.gz")
-  String file_allsnv_name = basename(parquet_including_all_snv, ".tar.gz")
+  String file_allShortVariants_name = basename(parquet_including_all_ShortVariants, ".tar.gz")
 
 
   command <<<
@@ -727,8 +727,8 @@ task LossLessAnnotation {
     # Unpack the VEP default annotation Parquet archive
     tar --use-compress-program=pigz -xf ~{vep_default_parquet}
 
-    # Unpack the Parquet archive containing all SNVs (raw input)
-    tar --use-compress-program=pigz -xf ~{parquet_including_all_snv}
+    # Unpack the Parquet archive containing all short variants (raw input)
+    tar --use-compress-program=pigz -xf ~{parquet_including_all_ShortVariants}
 
     # Run the Spark-based lossless annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
@@ -736,17 +736,17 @@ task LossLessAnnotation {
     mkdir -p /home/jupyter/tmp_spark
     export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
 
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allsnv_name} ~{file_vepdefault_name} "$plugin_files" "snvDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allShortVariants_name} ~{file_vepdefault_name} "$plugin_files" "ShortVariantsDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
 
     rm -rf /home/jupyter/tmp_spark
 
     # Compress the resulting lossless annotation parquet output directory
-    tar --use-compress-program=pigz -cf "snvDB_lossless.parquet.tar.gz" "snvDB_lossless.parquet"
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_lossless.parquet.tar.gz" "ShortVariantsDB_lossless.parquet"
 
   >>>
 
   output {
-    File lossless_parquet_compressed = "snvDB_lossless.parquet.tar.gz"
+    File lossless_parquet_compressed = "ShortVariantsDB_lossless.parquet.tar.gz"
     File log_output = "output.log"
   }
 
@@ -781,18 +781,18 @@ task RefinedAnnotation {
     mkdir -p /home/jupyter/tmp_spark
     export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
     
-    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "snvDB_refined_summary.txt" "snvDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
+    /opt/spark/bin/spark-submit --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "ShortVariantsDB_refined_summary.txt" "ShortVariantsDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
 
     rm -rf /home/jupyter/tmp_spark
     
     # Compress the resulting refined parquet directory into a tar.gz archive
-    tar --use-compress-program=pigz -cf "snvDB_refined.parquet.tar.gz" "snvDB_refined.parquet"
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_refined.parquet.tar.gz" "ShortVariantsDB_refined.parquet"
 
   >>>
 
   output {
-    File summary_report = "snvDB_refined_summary.txt"
-    File refined_parquet = "snvDB_refined.parquet.tar.gz"
+    File summary_report = "ShortVariantsDB_refined_summary.txt"
+    File refined_parquet = "ShortVariantsDB_refined.parquet.tar.gz"
   }
 
   runtime {
@@ -807,18 +807,18 @@ task RefinedAnnotation {
 task ProduceSummaryPDF {
     # This rule produces a filtered parquet file commonly used for downstream analysis.
   input {
-    File snvs_annotated_parquet
+    File ShortVariants_annotated_parquet
     Int cpu = 96             # default to 96 CPUs
     Int mem_per_cpu = 4     # default to 4 GB per CPU
   }
 
-  String file = basename(snvs_annotated_parquet, ".parquet.tar.gz")
+  String file = basename(ShortVariants_annotated_parquet, ".parquet.tar.gz")
 
   command <<<
     set -euo pipefail
 
     # Unpack the lossless parquet archive into current directory
-    tar --use-compress-program=pigz -xf ~{snvs_annotated_parquet}
+    tar --use-compress-program=pigz -xf ~{ShortVariants_annotated_parquet}
 
     python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
 
