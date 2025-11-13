@@ -218,11 +218,11 @@ if the first consequence is `missense_variant` → **Missense**
 | **POS** | Position | Genomic position of the variant. |
 | **REF** | Reference allele | Reference allele at the variant position. |
 | **ALT** | Alternate allele | Alternate allele observed at the variant position. |
-| **GT** | Genotype | Genotype of the individual for the variant, computed by Deepvariant. |
-| **DP** | Read depth | Read depth supporting the variant call, computed by Deepvariant. |
-| **GQ** | Genotype quality | Genotype quality score, computed by Deepvariant. |
-| **REF_AD** | Reference allele read depth | Read count supporting the reference allele, computed by Deepvariant. |
-| **ALT_AD** | Alternate allele read depth | Read count supporting the alternate allele, computed by Deepvariant. |
+| **GT** | Genotype | Genotype of the individual for the variant. |
+| **DP** | Read depth | Read depth supporting the variant call. |
+| **GQ** | Genotype quality | Genotype quality score. |
+| **REF_AD** | Reference allele read depth | Read count supporting the reference allele. |
+| **ALT_AD** | Alternate allele read depth | Read count supporting the alternate allele. |
 | **AC_ratio** | Allele count ratio | Allele count ratio of the alternate allele. `ALT_AD / DP` |
 | **Gene** | Gene Ensembl stable ID | Ensembl stable ID of affected gene. |
 | **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
