@@ -138,10 +138,12 @@ def generate_pdf_dictionary_duckdb(path_to_dataset, total_memory):
 if __name__ == "__main__":
     parquet_input = sys.argv[1]
     cpus = int(sys.argv[2])
-    total_memory = int(float(sys.argv[3]))
+    
+    mem_per_cpu = float(sys.argv[3])
+    total_memory = int(cpus * mem_per_cpu)
 
     print(f"[INFO] Input Parquet: {parquet_input}")
-    print(f"[INFO] CPUs: {cpus}")
+    print(f"[INFO] CPUs: {cpus}, Memory per CPU: {mem_per_cpu} GB")
     print(f"[INFO] Total memory allocated: {total_memory} GB")
 
     generate_pdf_dictionary_duckdb(parquet_input, total_memory)
