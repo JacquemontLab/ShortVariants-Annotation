@@ -8,7 +8,7 @@
 
 This repository contains a bioinformatics pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
 
-The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts. 
+The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts, whether using Nextflow or Snakemake.
 
 As a result, three distinct pipelines are available (see the `setup` directory for details):
 
@@ -97,7 +97,7 @@ This script performs the following tasks:
 
 
 ## Different Steps of the Pipeline
-This repository provides a Snakemake-based workflow for processing and annotating short variants (SNVs and Indels) on human reference genome version **GRCh38**.
+This repository provides a workflow implemented in Snakemake or Nextflow for processing and annotating short variants (SNVs and Indels) on the human reference genome **GRCh38**.
 
 ### Workflow DAG
 Below is a graphical representation of the workflow:
@@ -127,7 +127,7 @@ The gVCF files are filtered to retain only:
 
 -   **SNPs**
 
-This corresponds to the **`produce_tsv_per_sample_SPARK`** step in Snakemake.
+This corresponds to the **`produce_tsv_per_sample_SPARK`** step in the SPARK Snakemake workflow, or to **`ProduceTSVPerSampleUKBB`** in the UKBB Nextflow pipeline.
 
 ### 3. Merging TSV to Parquet
 
