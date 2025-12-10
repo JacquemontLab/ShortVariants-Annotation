@@ -16,7 +16,7 @@ NUM_BATCHES = config["num_batches"]
 if NUM_BATCHES > 10000:
     raise ValueError(f"NUM_BATCHES is set to {NUM_BATCHES}, which exceeds the maximum allow
 
-FASTA_REF = config["pathWorkflow"] + "resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+FASTA_REF = config["pathWorkflow"] + "/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
 
 pathVEPcache = pathWorkflow + "/resources/vep_cache/"  # Main project directory
