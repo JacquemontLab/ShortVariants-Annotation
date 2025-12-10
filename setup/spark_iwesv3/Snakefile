@@ -58,10 +58,10 @@ CHROMOSOMES = [f"chr{i}" for i in range(1, 23)] + ["chrX", "chrY"]  # List of ch
 
 rule all:
     input:
-        expand(pathResults  + "/Refined_Annotated_ShortVariants.parquet"),
-        expand(pathResults  + "/Lossless_Annotated_ShortVariants.parquet"),
-        expand(pathResults  + "/Refined_Annotated_ShortVariants_dictionary.pdf"),
-        expand(pathResults  + "/Lossless_Annotated_ShortVariants_dictionary.pdf")
+        expand(pathResults  + "Refined_Annotated_ShortVariants.parquet"),
+        expand(pathResults  + "Lossless_Annotated_ShortVariants.parquet"),
+        expand(pathResults  + "Refined_Annotated_ShortVariants_dictionary.pdf"),
+        expand(pathResults  + "Lossless_Annotated_ShortVariants_dictionary.pdf")
 
 
 
