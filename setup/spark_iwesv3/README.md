@@ -18,11 +18,11 @@ source software/venv/bin/activate
 
 ```bash
 snakemake \
+  --snakefile setup/spark_iwesv3/Snakefile \
+  --configfile setup/spark_iwesv3/config.json \
   --executor cluster-generic \
   --cluster-generic-submit-cmd "sbatch --parsable --account=XXXX -N 1 -J {params.name} --ntasks={resources.cpus} --nodes=1 --mem-per-cpu={resources.mem_per_cpu}G -t {resources.time} -o {params.stdout} -e {params.stderr}" \
   --cluster-generic-cancel-cmd "scancel" \
-  --report report.html \
-  --configfile setup/spark_iwesv3/config.json \
   -j 100 \
   -n \
   --unlock

@@ -14,7 +14,7 @@ NUM_BATCHES = config["num_batches"]
 
 # Check if NUM_BATCHES exceeds the maximum allowed value (10,000)
 if NUM_BATCHES > 10000:
-    raise ValueError(f"NUM_BATCHES is set to {NUM_BATCHES}, which exceeds the maximum allow
+    raise ValueError(f"NUM_BATCHES is set to {NUM_BATCHES}, which exceeds the maximum allow")
 
 FASTA_REF = config["pathWorkflow"] + "/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
@@ -58,10 +58,10 @@ CHROMOSOMES = [f"chr{i}" for i in range(1, 23)] + ["chrX", "chrY"]  # List of ch
 
 rule all:
     input:
-        expand(pathResults  + "Refined_Annotated_ShortVariants.parquet"),
-        expand(pathResults  + "Lossless_Annotated_ShortVariants.parquet"),
-        expand(pathResults  + "Refined_Annotated_ShortVariants_dictionary.pdf"),
-        expand(pathResults  + "Lossless_Annotated_ShortVariants_dictionary.pdf")
+        expand(pathResults  + "ShortVariantsDB_curated.parquet"),
+        expand(pathResults  + "ShortVariantsDB_unfiltered.parquet"),
+        expand(pathResults  + "ShortVariantsDB_curated_dictionary.pdf"),
+        expand(pathResults  + "ShortVariantsDB_unfiltered_dictionary.pdf")
 
 
 
@@ -417,7 +417,7 @@ rule run_vep_plugin_spliceai:
         # Default parameters
         # Call docker VEP
         /usr/bin/time -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
-            {pathVEPcache}software/ensembl-vep.sif \
+            {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
                 --dir_cache={pathVEPcache} \
@@ -457,57 +457,57 @@ rule convert_vep_out_parquet:
 
 
 
-rule lossless_annotation:
+rule unfiltered_annotation:
     # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
     resources:
         time = "00-07:00:00", mem_per_cpu = 30, cpus = 64
     params:
-        name = "lossless_annotation",
-        stdout = pathLog + "lossless_annotation.stdout",
-        stderr = pathLog + "lossless_annotation.stderr",
+        name = "unfiltered_annotation",
+        stdout = pathLog + "unfiltered_annotation.stdout",
+        stderr = pathLog + "unfiltered_annotation.stderr",
         plugin_files = ",".join(expand(pathTempResults + "data/processed/intermediate_parquet/plugins/{plugin}.parquet", plugin=PLUGINS)) 
     input:
         expand( pathTempResults  + "data/processed/intermediate_parquet/plugins/{plugin}.parquet", plugin=PLUGINS),
         vep_default_path = pathTempResults  + "data/processed/intermediate_parquet/plugins/default.parquet",
         parquet_including_all_ShortVariants = pathTempResults  + "data/processed/Unannotated_ShortVariants.parquet"
     output:
-        ShortVariants_annotated_parquet = directory(pathResults  + "Lossless_Annotated_ShortVariants.parquet")
+        ShortVariants_annotated_parquet = directory(pathResults  + "ShortVariantsDB_unfiltered.parquet")
     shell:
         """
         source {path_venv}bin/activate
     
-        mkdir -p /home/jupyter/tmp_spark
-        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
+        mkdir -p tmp_spark
+        export SPARK_LOCAL_DIRS=tmp_spark
 
-        /usr/bin/time -v python {pathScripts}lossless_annotation.py {input.parquet_including_all_ShortVariants} {input.vep_default_path} {params.plugin_files} {output.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}unfiltered_annotation.py {input.parquet_including_all_ShortVariants} {input.vep_default_path} {params.plugin_files} {output.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
 
-        rm -rf /home/jupyter/tmp_spark
+        rm -rf tmp_spark
         """
 
 
-rule refined_annotation:
+rule curated_annotation:
     # This rule produces a filtered parquet file commonly used for downstream analysis.
     resources:
         time = "00-02:00:00", mem_per_cpu = 3, cpus = 64
     params:
-        name = "refined_annotation",
-        stdout = pathLog + "refined_annotation.stdout",
-        stderr = pathLog + "refined_annotation.stderr",
+        name = "curated_annotation",
+        stdout = pathLog + "curated_annotation.stdout",
+        stderr = pathLog + "curated_annotation.stderr",
     input:
-        ShortVariants_annotated_parquet = pathResults  + "Lossless_Annotated_ShortVariants.parquet"
+        ShortVariants_annotated_parquet = pathResults  + "ShortVariantsDB_unfiltered.parquet"
     output:
-        summary_report = pathResults  + "Refined_Annotated_ShortVariants_summary.txt",
-        refined_parquet = directory(pathResults  + "Refined_Annotated_ShortVariants.parquet")
+        summary_report = pathResults  + "ShortVariantsDB_curated_summary.txt",
+        curated_parquet = directory(pathResults  + "ShortVariantsDB_curated.parquet")
     shell:
         """
         source {path_venv}bin/activate
     
-        mkdir -p /home/jupyter/tmp_spark
-        export SPARK_LOCAL_DIRS=/home/jupyter/tmp_spark
+        mkdir -p tmp_spark
+        export SPARK_LOCAL_DIRS=tmp_spark
 
-        /usr/bin/time -v python {pathScripts}refine_annotation.py {input.ShortVariants_annotated_parquet} {output.summary_report} {output.refined_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}curated_annotation.py {input.ShortVariants_annotated_parquet} {output.summary_report} {output.curated_parquet} {resources.cpus} {resources.mem_per_cpu}
         
-        rm -rf /home/jupyter/tmp_spark
+        rm -rf tmp_spark
         
         """
 

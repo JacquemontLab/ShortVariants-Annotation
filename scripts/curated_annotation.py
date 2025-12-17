@@ -141,10 +141,11 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     write_to_file(report_output, f"\nShort variants Count after QC (DP >= 20 and GQ >= 30 and 0.2 <= AC_ratio <= 0.8): {unique_iid_ShortVariants_count_qc}\n")
 
 
-
-    # Compute dataset_AF Group by variant and count distinct SampleIDs
+    # Compute dataset_AF as allele frequency: group by variant and divide by 2 × total number of individuals
     variant_iid_counts = ShortVariants_chrom.groupBy("POS", "REF", "ALT") \
-        .agg((countDistinct("SampleID") / lit(unique_iid_count)).alias("dataset_AF"))
+    .agg(
+        (countDistinct("SampleID") / (lit(2) * lit(unique_iid_count))).alias("dataset_AF")
+    )
     
     # Join back to original data
     ShortVariants_chrom = ShortVariants_chrom.join(variant_iid_counts, on=["POS", "REF", "ALT"], how="left")

@@ -29,12 +29,11 @@ Additionally, the pipeline works with compressed VCF files (`.vcf.gz`) that have
 #### 1. `list_sample.txt`
 
 A plain text file listing the **sample IDs**, one per line.
-The header `sampleID` is required.
+No header should be included.
 
 **Example:**
 
 ```
-sampleID
 AXXXXX
 BXXXXX
 CXXXXX
@@ -161,18 +160,18 @@ Each chromosome's unique short variants (SNVs and Indels) are annotated using **
 The VEP output is reformatted per plugin, for example **SpliceAI_pred** is split into separate columns, the maximum AF across gnomAD population is computed.
 Only unique short variants (SNVs and Indels) with an annotation of the given plugin are retained, reducing file size and computation time (**`convert_vep_out_parquet`** rule).
 
-### 7. Creating a Lossless Annotation
+### 7. Creating an Unfiltered Annotation
 
 This is the most resources consuming step, it merges **`Unannotated_ShortVariants.parquet`** with plugin annotations.
-The output is **`ShortVariantsDB_lossless.parquet`**, partitioned by chromosome (**`lossless_annotation`** rule).
+The output is **`ShortVariantsDB_unfiltered.parquet`**, partitioned by chromosome (**`unfiltered_annotation`** rule).
 
 To reduce the size of the database, we removed:
 
--   **Short variants where either MANE or CANONICAL annotation is not null**
+-   **Short variants for which both MANE and CANONICAL annotations are null**
 
-### 8. Refining Annotation
+### 8. Curating Annotation
 
-This step filters data to generate a more relevant downstream dataset (**`refined_annotation`** rule). The dataset correspond to **`ShortVariantsDB_refined.parquet`**.
+This step filters data to generate a more relevant downstream dataset (**`curated_annotation`** rule). The dataset correspond to **`ShortVariantsDB_curated.parquet`**.
 
 Key processing steps:
 
@@ -208,7 +207,7 @@ if the first consequence is `missense_variant` → **Missense**
 
 **Missense** (am_pathogenicity ≥ 0.564 , 'likely_pathogenic')
 
-## Output format of **`ShortVariantsDB_refined.parquet`**
+## Output format of **`ShortVariantsDB_curated.parquet`**
 
 
 | Column name | Label | Description |
@@ -226,15 +225,58 @@ if the first consequence is `missense_variant` → **Missense**
 | **AC_ratio** | Allele count ratio | Allele count ratio of the alternate allele. `ALT_AD / DP` |
 | **Gene** | Gene Ensembl stable ID | Ensembl stable ID of affected gene. |
 | **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
-| **CANONICAL** | Canonical Transcript | Transcript is the canonical. |
+| **CANONICAL** | Canonical transcript | Indicates whether the transcript is the canonical transcript. |
 | **MANE** | Mane Transcript | Transcript is the MANE Select or MANE Plus Clinical transcript for the gene. |
-| **dataset_AF** | Dataset Allele Frequency | Number of individual having the short variant (after QC filter) / number of total individuals in the dataset. |
+| **dataset_AF** | Dataset Allele Frequency | Number of individual having the short variant (after QC filter) / 2 × the total number of individuals in the dataset. |
 | **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
 | **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
 | **MAX_AF_POPS** | Populations with maximum allele frequency | Population in which was found MAX_AF. |
 | **Variant_Type** | Type of variant | Functional impact classification of the variant. |
-| **am_pathogenicity** | Probability of the variant being pathogenic | A continuous score between 0 and 1 which can be interpreted as the predicted probability of the variant being pathogenic, from AlphaMissense plugin. |
+| **am_pathogenicity** | AlphaMissense pathogenicity score | A continuous score between 0 and 1 which can be interpreted as the predicted probability of the variant being pathogenic, from AlphaMissense plugin. |
 | **Max_DS_SpliceAI** | Maximum SpliceAI Delta Score | Maximum SpliceAI delta score for splicing impact. |
+
+
+## Output format of **`ShortVariantsDB_unfiltered.parquet`**
+
+
+| Column name | Label | Description |
+|-------------|-------|-------------|
+| **ID** | Variant ID | Unique identifier of the short variant. |
+| **SampleID** | Sample ID | Unique identifier for the sample. |
+| **CHROM** | Chromosome | Chromosome where the variant is located. |
+| **POS** | Position | Genomic position of the variant. |
+| **REF** | Reference allele | Reference allele at the variant position. |
+| **ALT** | Alternate allele | Alternate allele observed at the variant position. |
+| **GT** | Genotype | Genotype of the individual for the variant. |
+| **DP** | Read depth | Read depth supporting the variant call. |
+| **GQ** | Genotype quality | Genotype quality score. |
+| **REF_AD** | Reference allele read depth | Read count supporting the reference allele. |
+| **ALT_AD** | Alternate allele read depth | Read count supporting the alternate allele. |
+| **Gene** | Gene Ensembl stable ID | Ensembl stable ID of affected gene. |
+| **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
+| **Consequence** | Variant consequence | Predicted functional consequence of the variant from VEP. |
+| **CANONICAL** | Canonical transcript | Indicates whether the transcript is the canonical transcript. |
+| **MANE** | MANE transcript | Indicates whether the transcript is a MANE Select or MANE Plus Clinical transcript. |
+| **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
+| **MAX_AF_POPS** | Populations with maximum allele frequency | Population in which was found MAX_AF. |
+| **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
+| **SYMBOL** | SpliceAI SYMBOL | HGNC gene symbol. |
+| **DS_AG** | SpliceAI DS_AG | SpliceAI delta score for acceptor gain. |
+| **DS_AL** | SpliceAI DS_AL | SpliceAI delta score for acceptor loss. |
+| **DS_DG** | SpliceAI DS_DG | SpliceAI delta score for donor gain. |
+| **DS_DL** | SpliceAI DS_DL | SpliceAI delta score for donor loss. |
+| **DP_AG** | SpliceAI DP_AG | SpliceAI delta position for acceptor gain. |
+| **DP_AL** | SpliceAI DP_AL | SpliceAI delta position for acceptor loss. |
+| **DP_DG** | SpliceAI DP_DG | SpliceAI delta position for donor gain. |
+| **DP_DL** | SpliceAI DP_DL | SpliceAI delta position for donor loss. |
+| **am_class** | AlphaMissense class | AlphaMissense predicted variant class. |
+| **am_pathogenicity** | AlphaMissense pathogenicity score | A continuous score between 0 and 1 which can be interpreted as the predicted probability of the variant being pathogenic, from AlphaMissense plugin. |
+| **LoF** | Loss-of-function status | LOFTEE loss-of-function annotation. |
+| **LoF_filter** | LOFTEE filter | LOFTEE filtering status. |
+| **LoF_flags** | LOFTEE flags | LOFTEE flags providing additional annotation context. |
+| **LoF_info** | LOFTEE information | Additional LOFTEE annotation details. |
+
+
 
 ## More Documentation
 Here are some useful links about the plugins used in this pipeline, provided by VEP (Variant Effect Predictor).
