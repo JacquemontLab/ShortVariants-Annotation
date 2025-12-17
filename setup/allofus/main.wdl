@@ -79,7 +79,7 @@ workflow process_gvcf_by_batch {
       plugin = "loftee"
   }
 
-  call LossLessAnnotation {
+  call UnFilteredAnnotation {
     input:
       plugins_parquet = [
         ConvertVEPOutSpliceAI.plugin_parquet_compressed,
@@ -90,9 +90,9 @@ workflow process_gvcf_by_batch {
       parquet_including_all_ShortVariants = Unannotated_ShortVariants_parquet_compressed
   }
 
-  call RefinedAnnotation {
+  call CuratedAnnotation {
     input:
-      lossless_parquet = LossLessAnnotation.lossless_parquet_compressed
+      unfiltered_parquet = UnFilteredAnnotation.unfiltered_parquet_compressed
   }
 
   output {
@@ -100,10 +100,10 @@ workflow process_gvcf_by_batch {
     Array[File] vep_output_txt = RunVEPDefault.stat
     Array[File] vep_output_html = RunVEPDefault.stat_html
     Array[File] vep_output_tsv = RunVEPDefault.tsv_vep
-    File refined_parquet = RefinedAnnotation.refined_parquet
-    File summary_report = RefinedAnnotation.summary_report
-    File lossless_parquet = LossLessAnnotation.lossless_parquet_compressed
-    File lossless_annotation_log = LossLessAnnotation.log_output
+    File curated_parquet = CuratedAnnotation.curated_parquet
+    File summary_report = CuratedAnnotation.summary_report
+    File unfiltered_parquet = UnFilteredAnnotation.unfiltered_parquet_compressed
+    File unfiltered_annotation_log = UnFilteredAnnotation.log_output
   }
 }
 
@@ -438,7 +438,7 @@ task ConvertVEPOutParquet {
 
 }
 
-task LossLessAnnotation {
+task UnFilteredAnnotation {
     # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
   input {
     Array[File] plugins_parquet             # list tsv
@@ -477,7 +477,7 @@ task LossLessAnnotation {
     # Unpack the Parquet archive containing all short variants (SNVs and Indels) (raw input)
     tar --use-compress-program=pigz -xf ~{parquet_including_all_ShortVariants}
 
-    # Run the Spark-based lossless annotation merge script
+    # Run the Spark-based unfiltered annotation merge script
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
     
     mkdir -p /home/jupyter/tmp_spark
@@ -486,17 +486,17 @@ task LossLessAnnotation {
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
-          --driver-memory "$driver_memory"g /usr/bin/lossless_annotation.py ~{file_allShortVariants_name} ~{file_vepdefault_name} "$plugin_files" "ShortVariantsDB_lossless.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
+          --driver-memory "$driver_memory"g /usr/bin/unfiltered_annotation.py ~{file_allShortVariants_name} ~{file_vepdefault_name} "$plugin_files" "ShortVariantsDB_unfiltered.parquet" ~{cpu} ~{mem_per_cpu}  2>&1 | tee output.log
 
     rm -rf /home/jupyter/tmp_spark
     
-    # Compress the resulting lossless annotation parquet output directory
-    tar --use-compress-program=pigz -cf "ShortVariantsDB_lossless.parquet.tar.gz" "ShortVariantsDB_lossless.parquet"
+    # Compress the resulting unfiltered annotation parquet output directory
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_unfiltered.parquet.tar.gz" "ShortVariantsDB_unfiltered.parquet"
 
   >>>
 
   output {
-    File lossless_parquet_compressed = "ShortVariantsDB_lossless.parquet.tar.gz"
+    File unfiltered_parquet_compressed = "ShortVariantsDB_unfiltered.parquet.tar.gz"
     File log_output = "output.log"
   }
 
@@ -509,23 +509,23 @@ task LossLessAnnotation {
   } 
 }
 
-task RefinedAnnotation {
+task CuratedAnnotation {
     # This rule produces a filtered parquet file commonly used for downstream analysis.
   input {
-    File lossless_parquet
+    File unfiltered_parquet
     Int cpu = 96
     Int mem_per_cpu = 6
     Int boot_disk_gb = 5
     Int disk_gb = 3000
   }
 
-  String file_name = basename(lossless_parquet, ".tar.gz")
+  String file_name = basename(unfiltered_parquet, ".tar.gz")
 
   command <<<
     set -euo pipefail
 
-    # Unpack the lossless parquet archive into current directory
-    tar --use-compress-program=pigz -xf ~{lossless_parquet}
+    # Unpack the unfiltered parquet archive into current directory
+    tar --use-compress-program=pigz -xf ~{unfiltered_parquet}
 
     # Run Spark job to filter and summarize annotations
     driver_memory=$(awk "BEGIN {printf \"%d\", ~{cpu} * ~{mem_per_cpu}}")
@@ -536,18 +536,18 @@ task RefinedAnnotation {
     /opt/spark/bin/spark-submit \
           --conf spark.driver.memory="${driver_memory}G" \
           --conf spark.driver.cores="~{cpu}" \
-          --driver-memory "$driver_memory"g /usr/bin/refine_annotation.py ~{file_name} "ShortVariantsDB_refined_summary.txt" "ShortVariantsDB_refined.parquet" ~{cpu} ~{mem_per_cpu}
+          --driver-memory "$driver_memory"g /usr/bin/curated_annotation.py ~{file_name} "ShortVariantsDB_curated_summary.txt" "ShortVariantsDB_curated.parquet" ~{cpu} ~{mem_per_cpu}
 
     rm -rf /home/jupyter/tmp_spark
     
-    # Compress the resulting refined parquet directory into a tar.gz archive
-    tar --use-compress-program=pigz -cf "ShortVariantsDB_refined.parquet.tar.gz" "ShortVariantsDB_refined.parquet"
+    # Compress the resulting curated parquet directory into a tar.gz archive
+    tar --use-compress-program=pigz -cf "ShortVariantsDB_curated.parquet.tar.gz" "ShortVariantsDB_curated.parquet"
 
   >>>
 
   output {
-    File summary_report = "ShortVariantsDB_refined_summary.txt"
-    File refined_parquet = "ShortVariantsDB_refined.parquet.tar.gz"
+    File summary_report = "ShortVariantsDB_curated_summary.txt"
+    File curated_parquet = "ShortVariantsDB_curated.parquet.tar.gz"
   }
 
   runtime {
@@ -575,7 +575,7 @@ task ProduceSummaryPDF {
   command <<<
     set -euo pipefail
 
-    # Unpack the lossless parquet archive into current directory
+    # Unpack the unfiltered parquet archive into current directory
     tar --use-compress-program=pigz -xf ~{ShortVariants_annotated_parquet}
 
     python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}

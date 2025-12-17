@@ -83,7 +83,7 @@ Runtime: **1h**
 
 ---
 
-### 5. `LossLessAnnotation`
+### 5. `UnFilteredAnnotation`
 
 This is the most resource-intensive step:
 
@@ -92,7 +92,7 @@ This is the most resource-intensive step:
 
 ---
 
-### 6. `RefinedAnnotation`
+### 6. `CuratedAnnotation`
 
 Final annotation step:
 
