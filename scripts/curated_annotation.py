@@ -36,7 +36,7 @@ from tqdm import tqdm  # Progress bar library
 
 
 # Parquet output path
-input_parquet_annotation = sys.argv[1]  # Path to unannotated short variants Parquet file
+input_parquet_annotation = sys.argv[1]  # Path to unfiltered short variants Parquet file
 report_output = sys.argv[2]  # Path to default VEP annotations
 parquet_output = sys.argv[3]  # Output Parquet file path
 cpus = int(sys.argv[4])  # Number of CPUs
