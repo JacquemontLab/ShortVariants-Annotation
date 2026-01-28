@@ -2,6 +2,7 @@
 
 // This rule converts VEP annotation output from compressed TSV format to Parquet, optimizing storage and retrieval.
 process ConvertVEPOutParquet {
+    label "pyspark"
     tag "Convert VEP output to Parquet: ${plugin}"
 
     input:
@@ -51,6 +52,7 @@ process ConvertVEPOutParquet {
 
 // This rule produces a filtered parquet file commonly used for downstream analysis.
 process ProduceSummaryPDF {
+    label "duckdb_python"
 
     // Inputs
     input:

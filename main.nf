@@ -37,7 +37,6 @@ process SplitSampleList {
         new_index=\$(( ${count_start} + i ))
         mv "\${files[i]}" "batch_\$(printf '%04d' \$new_index)"
     done
-
     """
 }
 
@@ -45,6 +44,7 @@ process SplitSampleList {
 // It extracts SNPs, INDELs, and Non Homozygous reference sites from variant calls.
 // The processed data is saved as a compressed TSV file for each sample.
 process ProduceTSVPerSample {
+    label "genomics_tools"
     tag "batch_${batch}"
 
     input:
@@ -88,6 +88,7 @@ process ProduceTSVPerSample {
 // This rule merges multiple TSV files containing gVCF data into a single Parquet file for a given batch.
 // Note : 1sec per samples, PySpark is able to multithread but it might not necessarily changed the process time
 process MergeTSVParquetByBatch {
+    label "pyspark"
     tag "batch: ${batch}"
 
     input:
@@ -127,6 +128,7 @@ process MergeTSVParquetByBatch {
 // This rule merges multiple batch-level Parquet files into a single consolidated Parquet file.
 // Note : 1sec per samples, PySpark is able to multithread but it might not necessarily changed the process time
 process MergeBatches {
+    label "pyspark"
 
     input:
     path parquet_files
@@ -168,6 +170,7 @@ process MergeBatches {
 
 // This rule extracts unique short variants (SNVs and Indels) from a large Parquet file and generates chromosome-specific VCF files
 process FindUniqShortVariantsVCF {
+    label "pyspark"
 
     input:
     path parquet_file  // the consolidated Parquet file
@@ -217,6 +220,7 @@ process FindUniqShortVariantsVCF {
 // This rule runs the Ensembl Variant Effect Predictor (VEP) to annotate unique short variants (SNVs and Indels) using default parameters.
 // Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_*, gnomADg_*
 process RunVEPDefault {
+    label "ensembl_vep_113"
     tag "VEP annotation: ${chrom}"
 
     input:
@@ -253,6 +257,7 @@ process RunVEPDefault {
 
 // Runs Ensembl VEP with the LOFTEE plugin to predict Loss-Of-Function of short variants (SNVs and Indels).
 process RunVEPLoftee {
+    label "ensembl_vep_113"
     tag "VEP Loftee: ${chrom}"
 
     input:
@@ -290,6 +295,7 @@ process RunVEPLoftee {
 
 // Runs Ensembl VEP with the AlphaMissense plugin to predict missense effects of short variants (SNVs and Indels).
 process RunVEPAlphamissense {
+    label "ensembl_vep_113"
     tag "VEP Alphamissense: ${chrom}"
 
     input:
@@ -327,6 +333,7 @@ process RunVEPAlphamissense {
 // Runs Ensembl VEP with the SpliceAI plugin to predict splice-altering effects of short variants (SNVs and Indels).
 // Need at least 100 GB of Storage due to cache
 process RunVEPSpliceAI {
+    label "ensembl_vep_113"
     tag "VEP SpliceAI: ${chrom}"
 
     input:
@@ -370,6 +377,7 @@ include { ConvertVEPOutParquet as ConvertVEPSpliceAIParquet } from './vep_proces
 
 // This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
 process UnfilteredAnnotation {
+    label "pyspark"
 
     input:
     path all_plugin_parquets          // list of plugin files
@@ -418,6 +426,7 @@ process UnfilteredAnnotation {
 
 // This rule produces a filtered parquet file commonly used for downstream analysis.
 process CuratedAnnotation {
+    label "pyspark"
 
     input:
     path ShortVariants_annotated_parquet

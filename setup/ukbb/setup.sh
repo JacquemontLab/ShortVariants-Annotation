@@ -39,6 +39,6 @@ docker pull ensemblorg/ensembl-vep:release_113.3
 docker save ensemblorg/ensembl-vep:release_113.3 -o ShortVariants-Annotation/resources/dockers/ensembl-vep_113.3.tar
 
 docker pull ghcr.io/jacquemontlab/genomics_tools:latest
-docker save ghcr.io/jacquemontlab/genomics_tools:latest -o ShortVariants-Annotation/resources/dockers/genomics-tools_v1.0.tar
+docker save ghcr.io/jacquemontlab/genomics_tools:latest -o ShortVariants-Annotation/resources/dockers/genomics_tools.tar
 
 # Then the ShortVariants-Annotation/ directory need to be saved on the bucket/project

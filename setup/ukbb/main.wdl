@@ -196,7 +196,6 @@ task ProduceTSVPerSampleUKBB {
     File file_gvcf_path              # 2-column: sample<TAB>gvcf_path
     Int cpu = 72
     String project
-    
   }
 
   # Derive batch_id from input file name (for use in output section)
@@ -204,7 +203,7 @@ task ProduceTSVPerSampleUKBB {
 
   command <<<
     # Download scripts and Docker image
-    dx download "~{project}:ShortVariants-Annotation/resources/dockers/genomics-tools_v1.0.tar"
+    dx download "~{project}:ShortVariants-Annotation/resources/dockers/genomics_tools.tar"
     dx download "~{project}:ShortVariants-Annotation/bin/dataset_specific/extraction_snps_indels_UKBB.sh"
     dx download "~{project}:ShortVariants-Annotation/bin/dataset_specific/produce_tsv_per_sample_UKBB.sh"
     
@@ -214,7 +213,7 @@ task ProduceTSVPerSampleUKBB {
     fasta_ref="GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
     # Load Docker image
-    docker load -i genomics-tools_v1.0.tar
+    docker load -i genomics_tools.tar
 
     # Pass DNAnexus environment variables to container
     env | grep '^DX_' > dx_env.list
