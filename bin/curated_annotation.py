@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Florian Bénitière 16/03/2025
 # This script processes annotated short variants (SNVs and Indels) data stored in Parquet format
 # using PySpark. It performs multiple steps including:

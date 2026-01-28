@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir \
     tqdm
 
 # Copy your Python script into /usr/bin
-COPY scripts/* /usr/bin/
+COPY bin/* /usr/bin/
 
 # Create a non-root user and switch to it
 RUN useradd -m -u 1000 flben

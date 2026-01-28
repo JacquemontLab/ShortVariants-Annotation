@@ -205,8 +205,8 @@ task ProduceTSVPerSampleUKBB {
   command <<<
     # Download scripts and Docker image
     dx download "~{project}:ShortVariants-Annotation/resources/dockers/genomics-tools_v1.0.tar"
-    dx download "~{project}:ShortVariants-Annotation/scripts/dataset_specific/extraction_snps_indels_UKBB.sh"
-    dx download "~{project}:ShortVariants-Annotation/scripts/dataset_specific/produce_tsv_per_sample_UKBB.sh"
+    dx download "~{project}:ShortVariants-Annotation/bin/dataset_specific/extraction_snps_indels_UKBB.sh"
+    dx download "~{project}:ShortVariants-Annotation/bin/dataset_specific/produce_tsv_per_sample_UKBB.sh"
     
     # Download reference genome
     dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
@@ -223,7 +223,7 @@ task ProduceTSVPerSampleUKBB {
     chmod +x *
 
     # Run the pipeline inside the container
-    docker run --env-file dx_env.list --rm -v /home/dnanexus/:/home/dnanexus/ -v $(pwd):/data -w /data flobenhsj/genomics-tools_v1.0:latest bash -c "
+    docker run --env-file dx_env.list --rm -v /home/dnanexus/:/home/dnanexus/ -v $(pwd):/data -w /data ghcr.io/jacquemontlab/genomics_tools:latest bash -c "
       bash ./produce_tsv_per_sample_UKBB.sh \
         '~{list_sample_to_process}' \
         '~{file_gvcf_path}' \
@@ -282,7 +282,7 @@ task MergeTSVParquetByBatch {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem1_ssd1_v2_x16"
   }
 }
@@ -327,7 +327,7 @@ task MergeBatches {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem3_ssd3_x96"
   }
 }
@@ -381,7 +381,7 @@ task FindUniqShortVariantsVCF {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem2_ssd2_v2_x96"
   }
   
@@ -467,7 +467,6 @@ task RunVEPLoftee {
   command <<<
     # Install pigz inside the container
     apt-get update && apt-get install -y pigz
-
 
     # Download and extract Ensembl VEP cache (GRCh38, release 113)
     dx download "~{project}:ShortVariants-Annotation/resources/vep_cache/homo_sapiens_vep_113_GRCh38.tar.gz"
@@ -683,10 +682,9 @@ task ConvertVEPOutParquet {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem2_ssd2_v2_x96"
   }
-  
 
 }
 
@@ -751,7 +749,7 @@ task UnFilteredAnnotation {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem3_ssd1_v2_x96"
   }
 }
@@ -796,7 +794,7 @@ task CuratedAnnotation {
   }
 
   runtime {
-    docker: "flobenhsj/spark-tsv-to-parquet_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/pyspark:latest"
     dx_instance_type: "mem3_ssd1_v2_x96"
   }
 }
@@ -829,8 +827,7 @@ task ProduceSummaryPDF {
   }
   
   runtime {
-    docker: "flobenhsj/duckdb_python_v1.0:latest"
+    docker: "ghcr.io/jacquemontlab/duckdb_python:latest"
     dx_instance_type: "mem2_ssd2_v2_x96"
   }
-  
 }

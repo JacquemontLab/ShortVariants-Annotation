@@ -1,0 +1,8 @@
+{
+  "pathWorkflow": "/home/flben/links/scratch/gvcf_psychEncode_c5032/ShortVariants-Annotation",
+  
+  "sample_list": "/home/flben/links/scratch/gvcf_psychEncode_c5032/list_sample.txt",
+  "gvcf_paths": "/home/flben/links/scratch/gvcf_psychEncode_c5032/sample_paths.tsv",
+  
+  "num_batches": 2
+}

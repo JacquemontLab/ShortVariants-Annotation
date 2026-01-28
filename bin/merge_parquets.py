@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Florian Bénitière 16/03/2025
 # Script to generate a .parquet file by merging all batch-level Parquet files
 

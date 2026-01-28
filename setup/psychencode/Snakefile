@@ -16,10 +16,10 @@ NUM_BATCHES = config["num_batches"]
 if NUM_BATCHES > 10000:
     raise ValueError(f"NUM_BATCHES is set to {NUM_BATCHES}, which exceeds the maximum allow")
 
-FASTA_REF = config["pathWorkflow"] + "/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+FASTA_REF = "/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/RAW_DATA/Genetic/Reference_Data/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
 
-pathVEPcache = pathWorkflow + "/resources/vep_cache/"  # Main project directory
+pathVEPcache = "/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/"  # Main project directory
 pathResults = pathWorkflow + "/results/"  # Main project directory
 path_venv = pathWorkflow + "/software/venv/"  # Path to the virtual environment
 pathScripts = pathWorkflow + "/bin/"  # Directory containing workflow scripts
@@ -127,14 +127,12 @@ rule produce_tsv_per_sample_SPARK:
 
         process_sample() {{
             sample=$1
-            input_gatk=$(zgrep "${{sample}}" "{input.file_gvcf_path}" | grep gatk | cut -f2)
-            input_deepvariant=$(zgrep "${{sample}}" "{input.file_gvcf_path}" | grep deepvariant | cut -f2)
+            input_gvcf=$(zgrep "${{sample}}" "{input.file_gvcf_path}" | cut -f2)
             
-            /usr/bin/time -v bash -c "
-                {pathScripts}dataset_specific/extraction_snps_indels_SPARK_iWESv3.sh \
+            timedev -v bash -c "
+                {pathScripts}dataset_specific/extraction_snps_indels_psychencode.sh \
                     \"${{sample}}\" \
-                    \"${{input_gatk}}\" \
-                    \"${{input_deepvariant}}\" \
+                    \"${{input_gvcf}}\" \
                     \"{params.dir_gvcf}${{sample}}.tsv.gz\" \
                     \"{input.fasta_ref}\" \
                     \"{resources.cpus}\""
@@ -170,7 +168,7 @@ rule merge_tsv_parquet_by_batch:
 
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}generate_parquet_all_ShortVariants.py {params.dir_gvcf} {output.parquet_including_all_ShortVariants} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}generate_parquet_all_ShortVariants.py {params.dir_gvcf} {output.parquet_including_all_ShortVariants} {resources.cpus} {resources.mem_per_cpu}
         """
 
 
@@ -193,7 +191,7 @@ rule merge_batches:
         """
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}merge_parquets.py {params.batches_files} {output.parquet_file} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}merge_parquets.py {params.batches_files} {output.parquet_file} {resources.cpus} {resources.mem_per_cpu}
         """
 
 
@@ -218,7 +216,7 @@ rule find_uniq_ShortVariants_vcf:
 
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}generate_parquet_uniq_ShortVariants.py {input.parquet_including_all_ShortVariants} {params.output_dir} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}generate_parquet_uniq_ShortVariants.py {input.parquet_including_all_ShortVariants} {params.output_dir} {resources.cpus} {resources.mem_per_cpu}
         
         # Check and load bcftools if missing
         if ! command -v bcftools &> /dev/null; then
@@ -282,7 +280,7 @@ rule run_vep_default:
 
         # Default parameters
         # Call docker VEP
-        /usr/bin/time -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
+        timedev -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
@@ -326,7 +324,7 @@ rule run_vep_plugin_loftee:
 
         # Default parameters
         # Call docker VEP
-        /usr/bin/time -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
+        timedev -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
@@ -372,7 +370,7 @@ rule run_vep_plugin_alphamissense:
 
         # Default parameters
         # Call docker VEP
-        /usr/bin/time -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
+        timedev -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
@@ -416,7 +414,7 @@ rule run_vep_plugin_spliceai:
 
         # Default parameters
         # Call docker VEP
-        /usr/bin/time -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
+        timedev -v apptainer exec --bind {pathWorkflow}:{pathWorkflow} \
             {pathVEPcache}ensembl-vep.sif \
             vep -i {input.vcf_to_annot} --format vcf \
                 --cache --offline --fork {resources.cpus} \
@@ -451,7 +449,7 @@ rule convert_vep_out_parquet:
 
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}convert_vep_output_parquet.py {params.input_vcf_dir} {output.plugin_parquet} {resources.cpus} {resources.mem_per_cpu} {wildcards.plugin}
+        timedev -v python {pathScripts}convert_vep_output_parquet.py {params.input_vcf_dir} {output.plugin_parquet} {resources.cpus} {resources.mem_per_cpu} {wildcards.plugin}
         """
 
 
@@ -460,7 +458,7 @@ rule convert_vep_out_parquet:
 rule unfiltered_annotation:
     # This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
     resources:
-        time = "00-07:00:00", mem_per_cpu = 30, cpus = 64
+        time = "00-07:00:00", mem_per_cpu = 3, cpus = 64
     params:
         name = "unfiltered_annotation",
         stdout = pathLog + "unfiltered_annotation.stdout",
@@ -479,7 +477,7 @@ rule unfiltered_annotation:
         mkdir -p tmp_spark
         export SPARK_LOCAL_DIRS=tmp_spark
 
-        /usr/bin/time -v python {pathScripts}unfiltered_annotation.py {input.parquet_including_all_ShortVariants} {input.vep_default_path} {params.plugin_files} {output.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}unfiltered_annotation.py {input.parquet_including_all_ShortVariants} {input.vep_default_path} {params.plugin_files} {output.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
 
         rm -rf tmp_spark
         """
@@ -505,7 +503,7 @@ rule curated_annotation:
         mkdir -p tmp_spark
         export SPARK_LOCAL_DIRS=tmp_spark
 
-        /usr/bin/time -v python {pathScripts}curated_annotation.py {input.ShortVariants_annotated_parquet} {output.summary_report} {output.curated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}curated_annotation.py {input.ShortVariants_annotated_parquet} {output.summary_report} {output.curated_parquet} {resources.cpus} {resources.mem_per_cpu}
         
         rm -rf tmp_spark
         
@@ -529,5 +527,5 @@ rule produce_summary_pdf:
         """
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}pdf_dictionnary.py {input.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        timedev -v python {pathScripts}pdf_dictionnary.py {input.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
         """

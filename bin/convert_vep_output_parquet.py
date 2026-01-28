@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Florian Bénitière 16/03/2025
 # This script processes VEP outputs per chromosome, extracts necessary columns
 # and merges them into a PySpark DataFrame before saving the output as a Parquet file.

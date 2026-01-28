@@ -3,7 +3,10 @@
 # 🛠️ Setup Instructions
 
 The `setup.sh` script helps install all the required tools and resources on **All of Us**.
-These resources must be available within your **workspace bucket**.
+## These resources must be available within your **workspace bucket**.
+
+Also the docker used in the main.wdl needs to be available on Google Cloud Artifact Registry to be used by GCloud.
+as described [here](https://support.researchallofus.org/hc/en-us/articles/21179878475028-Using-Docker-Images-on-the-Workbench).
 
 
 # 👤 Bioinformatician Information
@@ -46,7 +49,7 @@ From this table, we extract the following fields for each variant:
 This extraction is performed using the script:
 
 ```
-ShortVariants-Annotation/scripts/dataset_specific/from_hail_to_ShortVariants_AllOfUs.py
+ShortVariants-Annotation/bin/dataset_specific/from_hail_to_ShortVariants_AllOfUs.py
 ```
 
 ---

@@ -13,7 +13,6 @@ path_project=resources/vep_cache/
 mkdir -p $path_project/ressources_loftee
 cd $path_project/ressources_loftee
 
-# Download cache assembly data for vep
 
 # Download files to run LOFTEE
 # Git repository

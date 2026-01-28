@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Florian Bénitière 16/03/2025
 # This script generates a, unfiltered annotated .parquet file by integrating variant effect predictor (VEP) annotations,
 # including all specified VEP plugins, and linking them to individual identifiers (SampleID).

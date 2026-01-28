@@ -1,4 +1,6 @@
-
+#!/bin/bash
+# Florian Bénitière 16/03/2025
+# Download, bgzip-compress, and index GRCh38 reference genome for VEP pipelines
 
 # Check if htslib is available
 if ! command -v htslib &> /dev/null; then

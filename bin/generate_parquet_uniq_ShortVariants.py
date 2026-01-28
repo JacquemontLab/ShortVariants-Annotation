@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Florian Bénitière 16/03/2025
 # Script to find unique short variants (SNVs and Indels) from a large .parquet file and produce VCF files per chromosome for use by VEP
 

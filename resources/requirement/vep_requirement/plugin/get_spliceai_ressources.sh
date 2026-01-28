@@ -3,7 +3,7 @@
 # This script downloads and sets up the necessary resources for running SpliceAI with VEP.
 
 # It creates a directory for SpliceAI resources, downloads the BaseSpace CLI from Illumina,
-# and fetches SpliceAI VCF files for both GRCh38 and GRCh19 genome assemblies.
+# and fetches SpliceAI VCF files for both GRCh38 genome assembly (command lines commented for GRCh37 (hg19)).
 # Ensure you have internet access and the necessary permissions before running this script.
 
 ORIG_DIR=$(pwd)
@@ -11,8 +11,6 @@ ORIG_DIR=$(pwd)
 path_project=resources/vep_cache/
 mkdir -p $path_project/ressources_spliceai
 cd $path_project
-
-# Download cache assembly data for vep
 
 
 # Download files to run spliceAI from BaseSpace Illumina
@@ -30,11 +28,11 @@ echo "🔑 Please authenticate BaseSpace CLI (this may open an interactive promp
 ./bs download project -i 66029966 --extension=raw.indel.hg38.vcf.gz.tbi
 
 
-
-./bs download project -i 66029966 --extension=raw.snv.hg19.vcf.gz
-./bs download project -i 66029966 --extension=raw.indel.hg19.vcf.gz
-./bs download project -i 66029966 --extension=raw.snv.hg19.vcf.gz.tbi
-./bs download project -i 66029966 --extension=raw.indel.hg19.vcf.gz.tbi
+# For GRCh37
+# ./bs download project -i 66029966 --extension=raw.snv.hg19.vcf.gz
+# ./bs download project -i 66029966 --extension=raw.indel.hg19.vcf.gz
+# ./bs download project -i 66029966 --extension=raw.snv.hg19.vcf.gz.tbi
+# ./bs download project -i 66029966 --extension=raw.indel.hg19.vcf.gz.tbi
 
 mv genome_scores_v1.3_ds.20a701bc58ab45b59de2576db79ac8d0 ressources_spliceai
 

@@ -4,7 +4,7 @@ version 1.0
 workflow process_gvcf_by_batch {
 
   input {
-    File Unannotated_ShortVariants_parquet_compressed                   # Unannotated_ShortVariants obtained using HAIL
+    File Unannotated_ShortVariants_parquet_compressed          # Unannotated_ShortVariants obtained using HAIL
     File homo_sapiens_vep_113_GRCh38_tar_gz                    # homo_sapiens_vep_113_GRCh38_tar_gz
     File ressources_spliceai_tar_gz                            # SpliceAI resources for VEP
     File ressources_alphamissense_tar_gz                       # AlphaMissense resources for VEP
@@ -160,7 +160,7 @@ task FindUniqShortVariantsVCF {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/pyspark:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -214,7 +214,7 @@ task RunVEPDefault {
   }
       
   runtime {
-    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
+    docker: 'gcr.io/softwarepgc/ensembl_vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -271,7 +271,7 @@ task RunVEPLoftee {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
+    docker: 'gcr.io/softwarepgc/ensembl_vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -326,7 +326,7 @@ task RunVEPAlphamissense {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
+    docker: 'gcr.io/softwarepgc/ensembl_vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -382,7 +382,7 @@ task RunVEPSpliceAI {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/ensembl-vep_113.3:latest'
+    docker: 'gcr.io/softwarepgc/ensembl_vep_113.3:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -429,7 +429,7 @@ task ConvertVEPOutParquet {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/pyspark:latest'
     memory: (cpu * mem_per_cpu) + " GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -501,7 +501,7 @@ task UnFilteredAnnotation {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/pyspark:latest'
     memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -551,7 +551,7 @@ task CuratedAnnotation {
   }
 
   runtime {
-    docker: 'gcr.io/softwarepgc/spark-tsv-to-parquet_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/pyspark:latest'
     memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
@@ -586,7 +586,7 @@ task ProduceSummaryPDF {
   }
   
   runtime {
-    docker: 'gcr.io/softwarepgc/duckdb_python_v1.0:latest'
+    docker: 'gcr.io/softwarepgc/duckdb_python:latest'
     memory: "624 GB"
     disks: "local-disk " + disk_gb + " HDD"
     bootDiskSizeGb: boot_disk_gb
