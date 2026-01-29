@@ -40,7 +40,7 @@ process ProduceTSVPerSample {
         input_gvcf=\$(grep "\${sample}" "file_path.tsv" | cut -f2)
 
         timedev -v bash -c "
-            extraction_snps_indels_psychencode.sh \
+            extraction_snps_indels_default.sh \
                 \\"\${sample}\\" \
                 \\"\${input_gvcf}\\" \
                 \\"\${OUTDIR}/\${sample}.tsv.gz\\" \
