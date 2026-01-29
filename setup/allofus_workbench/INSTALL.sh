@@ -1,4 +1,6 @@
 #!/bin/bash
+# Download and prepare all reference resources and dockers required for variant annotation
+
 set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Properly propagate errors through pipelines
 

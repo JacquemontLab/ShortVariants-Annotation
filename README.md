@@ -1,4 +1,4 @@
-[![Jacquemont's Lab Header](labheader.png)](https://www.jacquemont-lab.org/)
+[![Jacquemont's Lab Header](img/labheader.png)](https://www.jacquemont-lab.org/)
 
 [Git Repository ShortVariants-Annotation](https://github.com/JacquemontLab/ShortVariants-Annotation.git)
 
@@ -101,7 +101,7 @@ This repository provides a workflow implemented in Snakemake or Nextflow for pro
 ### Workflow DAG
 Below is a graphical representation of the workflow:
 
-![Workflow DAG](dag.png)
+![Workflow DAG](img/dag.png)
 
 ### Prerequisite to run the Snakefile pipeline: Downloading the Raw Data
 

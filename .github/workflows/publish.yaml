@@ -2,7 +2,7 @@ name: Build and Push Multiple GHCR Images
 
 on:
   push:
-    branches: [ nextflow_pipeline ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:

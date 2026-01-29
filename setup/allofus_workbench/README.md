@@ -2,7 +2,7 @@
 
 # 🛠️ Setup Instructions
 
-The `setup.sh` script helps install all the required tools and resources on **All of Us**.
+The `INSTALL.sh` script helps install all the required tools and resources on **All of Us**.
 ## These resources must be available within your **workspace bucket**.
 
 Also the docker used in the main.wdl needs to be available on Google Cloud Artifact Registry to be used by GCloud.

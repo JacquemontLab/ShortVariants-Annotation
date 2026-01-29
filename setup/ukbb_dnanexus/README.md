@@ -2,7 +2,7 @@
 
 # 🛠️ Setup Instructions
 
-The `setup.sh` script helps you install all the required tools and resources on UKB-RAP.
+The `INSTALL.sh` script helps you install all the required tools and resources on UKB-RAP.
 ## These resources need to be made available within your **DNAnexus project**.
 By reviewing each step, you can better understand how the Cromwell server accesses the necessary files and resources.
 

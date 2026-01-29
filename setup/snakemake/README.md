@@ -1,12 +1,17 @@
 
 # 🛠️ Setup Instructions
 
-The `setup.sh` file helps you install all the required tools and resources on your **local machine** or **server**.
+The `INSTALL.sh` file helps you install all the required tools and resources on your **local machine** or **server**.
 
 
 # 🚀 Running the Workflow on a Cluster
 
 Once your input file is defined in the `config.json`, you can launch the workflow on a cluster using `snakemake`:
+
+# 👤 Bioinformatician Information
+
+**Florian Bénitière**
+📅 12/03/2025
 
 ### 1. Activate the virtual environment:
 
@@ -18,8 +23,8 @@ source software/venv/bin/activate
 
 ```bash
 snakemake \
-  --snakefile setup/spark_iwesv3/Snakefile \
-  --configfile setup/spark_iwesv3/config.json \
+  --snakefile setup/snakemake/Snakefile \
+  --configfile setup/snakemake/config.json \
   --executor cluster-generic \
   --cluster-generic-submit-cmd "sbatch --parsable --account=XXXX -N 1 -J {params.name} --ntasks={resources.cpus} --nodes=1 --mem-per-cpu={resources.mem_per_cpu}G -t {resources.time} -o {params.stdout} -e {params.stderr}" \
   --cluster-generic-cancel-cmd "scancel" \
