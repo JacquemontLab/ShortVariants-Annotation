@@ -38,15 +38,16 @@ process ConvertVEPOutParquet {
     mkdir -p plugins/
 
     echo "Converting VEP output for plugin: ${plugin} to Parquet"
-
-    timedev -v convert_vep_output_parquet.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/convert_vep_output_parquet.py \
         vep_annotation/ \
         plugins/${plugin}.parquet \
         ${task.cpus} \
         \${MEM_PER_CPU_GB} \
-        ${plugin}
+        ${plugin} 2>&1 | tee output.log
     """
 }
+
 
 
 
@@ -81,7 +82,7 @@ process ProduceSummaryPDF {
     echo "Using ${task.cpus} CPUs"
     echo "Memory per CPU: \${MEM_PER_CPU_GB} GB"
 
-    timedev -v pdf_dictionnary.py \
+    timedev -v /usr/bin/pdf_dictionnary.py \
         ${ShortVariants_annotated_parquet} \
         ${task.cpus} \
         \${MEM_PER_CPU_GB}

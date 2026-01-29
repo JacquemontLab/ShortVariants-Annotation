@@ -3,70 +3,41 @@
 nextflow.enable.dsl=2
 
 
-
-// This rule splits a large sample list into multiple smaller files (batches) 
-// to facilitate parallel processing. Each batch contains approximately equal 
-// numbers of lines, ensuring balanced workload distribution.
-process SplitSampleList {
-
-    input:
-    path sample_list
-    val num_batches
-    val count_start
-
-    output:
-    path "batch_*", emit: batch_files
-
-    script:
-    """
-
-    # Count total lines
-    total_lines=\$(wc -l < "${sample_list}")
-
-    # Determine number of lines per batch
-    lines_per_batch=\$(( (total_lines + ${num_batches} - 1) / ${num_batches} ))
-
-    # Split the file into num_batches files
-    split -d -a 4 -l \$lines_per_batch "${sample_list}" "batch_"
-
-    # Rename files to start numbering at count_start
-    files=( \$(ls -v batch_*) )
-    total_files=\${#files[@]}
-
-    for (( i=total_files-1; i>=0; i-- )); do
-        new_index=\$(( ${count_start} + i ))
-        mv "\${files[i]}" "batch_\$(printf '%04d' \$new_index)"
-    done
-    """
-}
-
 // This rule processes per-sample gVCF files for the UKBB dataset for a given batch.
 // It extracts SNPs, INDELs, and Non Homozygous reference sites from variant calls.
 // The processed data is saved as a compressed TSV file for each sample.
 process ProduceTSVPerSample {
     label "genomics_tools"
-    tag "batch_${batch}"
 
     input:
-    val batch
     path list_sample_to_process
     path file_gvcf_path
     path fasta_ref
 
     output:
-    path "batch_${batch}_gvcf_produced", emit: batch_done
+    path "batch_${task.index}", emit: batch_done
 
     script:
     """
     echo "Using ${task.cpus} CPUs"
-    
-    export OUTDIR="batch_${batch}_gvcf_produced"
+
+    # find file name
+    # Create a list of actual files in that directory
+    ls *.gz | xargs -n1 basename > actual_files.txt
+
+    # Filter the TSV to filenames that exist
+    zcat "${file_gvcf_path}" | awk 'NR==1 {print \$1"\\t"\$2; next} {n=split(\$2,a,"/"); print \$1"\\t"a[n]}' \
+        | grep -Ff actual_files.txt > file_path.tsv
+
+    batch_id=${task.index}
+
+    export OUTDIR="batch_\$batch_id"
 
     mkdir -p "\$OUTDIR"
 
     process_sample() {
         sample=\$1
-        input_gvcf=\$(zgrep "\${sample}" "${file_gvcf_path}" | cut -f2)
+        input_gvcf=\$(grep "\${sample}" "file_path.tsv" | cut -f2)
 
         timedev -v bash -c "
             extraction_snps_indels_psychencode.sh \
@@ -80,7 +51,7 @@ process ProduceTSVPerSample {
 
     export -f process_sample
 
-    cat ${list_sample_to_process} | parallel -j ${task.cpus} process_sample {}
+    cut -f1 file_path.tsv | parallel -j ${task.cpus} process_sample {}
 
     """
 }
@@ -117,10 +88,12 @@ process MergeTSVParquetByBatch {
     echo "Using ${task.cpus} CPUs"
     echo "Memory per CPU: \${MEM_PER_CPU_GB} GB"
 
-    timedev -v generate_parquet_all_ShortVariants.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/generate_parquet_all_ShortVariants.py \
         ${batch_done}/ \
         Unannotated_ShortVariants_batch_${batch}.parquet \
-        ${task.cpus} \${MEM_PER_CPU_GB}
+        ${task.cpus} \${MEM_PER_CPU_GB} 2>&1 | tee output.log
+
     """
 }
 
@@ -161,10 +134,11 @@ process MergeBatches {
     echo "Merging batches:"
     echo "${batches_files}"
 
-    timedev -v merge_parquets.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/merge_parquets.py \
         ${batches_files} \
         Unannotated_ShortVariants.parquet \
-        ${task.cpus} \${MEM_PER_CPU_GB}
+        ${task.cpus} \${MEM_PER_CPU_GB} 2>&1 | tee output.log
     """
 }
 
@@ -200,10 +174,11 @@ process FindUniqShortVariantsVCF {
     mkdir -p vcf_uniq_ShortVariants/
 
     # Extract unique ShortVariants into chromosome-specific VCFs
-    timedev -v generate_parquet_uniq_ShortVariants.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/generate_parquet_uniq_ShortVariants.py \
         ${parquet_file} \
         vcf_uniq_ShortVariants/ \
-        ${task.cpus} \${MEM_PER_CPU_GB}
+        ${task.cpus} \${MEM_PER_CPU_GB} 2>&1 | tee output.log
 
     # Sort, compress, index, and clean VCFs
     for file in vcf_uniq_ShortVariants/chr*.vcf; do
@@ -226,6 +201,7 @@ process RunVEPDefault {
     input:
     val chrom
     path vcf_file
+    path vep_cache
 
     output:
     path "default/${chrom}.tsv.gz", emit: tsv_vep
@@ -239,11 +215,9 @@ process RunVEPDefault {
 
     echo "Annotating chromosome ${chrom} with VEP using ${task.cpus} CPUs"
 
-    timedev -v apptainer exec --bind ${workflow.projectDir}:${workflow.projectDir} \
-        /home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/Dockers/ensembl_113_latest.sif \
-        vep -i ${vcf_file} --format vcf \
+    timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
-            --dir_cache=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ \
+            --dir_cache=${vep_cache}/ \
             --assembly GRCh38 \
             --force_overwrite --compress_output gzip --tab \
             --output_file default/${chrom}.tsv.gz \
@@ -263,6 +237,7 @@ process RunVEPLoftee {
     input:
     val chrom
     path vcf_file
+    path vep_cache
 
     output:
     path "loftee/${chrom}.tsv.gz", emit: tsv_vep
@@ -276,17 +251,15 @@ process RunVEPLoftee {
 
     echo "Annotating chromosome ${chrom} with VEP using ${task.cpus} CPUs"
 
-    timedev -v apptainer exec --bind ${workflow.projectDir}:${workflow.projectDir} \
-        /home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/Dockers/ensembl_113_latest.sif \
-        vep -i ${vcf_file} --format vcf \
+    timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
-            --dir_cache=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ \
+            --dir_cache=${vep_cache}/ \
             --assembly GRCh38 \
             --force_overwrite --compress_output gzip --tab \
             --output_file loftee/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file loftee/${chrom}.txt \
-            --plugin LoF,loftee_path:/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ressources_loftee/loftee-1.0.4_GRCh38/ \
-            --dir_plugins /home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ressources_loftee/loftee-1.0.4_GRCh38/ \
+            --plugin LoF,loftee_path:${vep_cache}/ressources_loftee/loftee-1.0.4_GRCh38/ \
+            --dir_plugins ${vep_cache}/ressources_loftee/loftee-1.0.4_GRCh38/ \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,LoF,LoF_filter,LoF_flags,LoF_info" \
             --verbose
     """
@@ -301,6 +274,7 @@ process RunVEPAlphamissense {
     input:
     val chrom
     path vcf_file
+    path vep_cache
 
     output:
     path "alphamissense/${chrom}.tsv.gz", emit: tsv_vep
@@ -314,16 +288,14 @@ process RunVEPAlphamissense {
 
     echo "Annotating chromosome ${chrom} with VEP using ${task.cpus} CPUs"
 
-    timedev -v apptainer exec --bind ${workflow.projectDir}:${workflow.projectDir} \
-        /home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/Dockers/ensembl_113_latest.sif \
-        vep -i ${vcf_file} --format vcf \
+    timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
-            --dir_cache=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ \
+            --dir_cache=${vep_cache}/ \
             --assembly GRCh38 \
             --force_overwrite --compress_output gzip --tab \
             --output_file alphamissense/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file alphamissense/${chrom}.txt \
-            --plugin AlphaMissense,file=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ressources_alphamissense/AlphaMissense_hg38.tsv.gz \
+            --plugin AlphaMissense,file=${vep_cache}/ressources_alphamissense/AlphaMissense_hg38.tsv.gz \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,am_class,am_pathogenicity" \
             --verbose
     """
@@ -339,6 +311,7 @@ process RunVEPSpliceAI {
     input:
     val chrom
     path vcf_file
+    path vep_cache
 
     output:
     path "spliceai/${chrom}.tsv.gz", emit: tsv_vep
@@ -352,26 +325,24 @@ process RunVEPSpliceAI {
 
     echo "Annotating chromosome ${chrom} with VEP using ${task.cpus} CPUs"
 
-    timedev -v apptainer exec --bind ${workflow.projectDir}:${workflow.projectDir} \
-        /home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/Dockers/ensembl_113_latest.sif \
-        vep -i ${vcf_file} --format vcf \
+    timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
-            --dir_cache=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ \
+            --dir_cache=${vep_cache}/ \
             --assembly GRCh38 \
             --force_overwrite --compress_output gzip --tab \
             --output_file spliceai/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file spliceai/${chrom}.txt \
-            --plugin SpliceAI,snv=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel=/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/SOFTWARE/VEP/cache/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
+            --plugin SpliceAI,snv=${vep_cache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel=${vep_cache}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,SpliceAI_pred" \
             --verbose
     """
 }
 
 // This rule converts VEP annotation output from compressed TSV format to Parquet, optimizing storage and retrieval.
-include { ConvertVEPOutParquet as ConvertVEPDefaultParquet } from './vep_processes.nf'
-include { ConvertVEPOutParquet as ConvertVEPLofteeParquet } from './vep_processes.nf'
-include { ConvertVEPOutParquet as ConvertVEPAlphamissenseParquet } from './vep_processes.nf'
-include { ConvertVEPOutParquet as ConvertVEPSpliceAIParquet } from './vep_processes.nf'
+include { ConvertVEPOutParquet as ConvertVEPDefaultParquet } from './modules/vep_processes.nf'
+include { ConvertVEPOutParquet as ConvertVEPLofteeParquet } from './modules/vep_processes.nf'
+include { ConvertVEPOutParquet as ConvertVEPAlphamissenseParquet } from './modules/vep_processes.nf'
+include { ConvertVEPOutParquet as ConvertVEPSpliceAIParquet } from './modules/vep_processes.nf'
 
 
 
@@ -411,13 +382,14 @@ process UnfilteredAnnotation {
     mkdir -p tmp_spark
     export SPARK_LOCAL_DIRS=tmp_spark
 
-    timedev -v unfiltered_annotation.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/unfiltered_annotation.py \
         ${parquet_including_all_ShortVariants} \
         ${vep_default_path} \
         ${plugin_files} \
         ShortVariantsDB_unfiltered.parquet \
         ${task.cpus} \
-        \${MEM_PER_CPU_GB}
+        \${MEM_PER_CPU_GB} 2>&1 | tee output.log
 
     rm -rf tmp_spark
     """
@@ -457,145 +429,229 @@ process CuratedAnnotation {
     mkdir -p tmp_spark
     export SPARK_LOCAL_DIRS=tmp_spark
 
-    timedev -v curated_annotation.py \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+        /usr/bin/curated_annotation.py \
         ${ShortVariants_annotated_parquet} \
         ShortVariantsDB_curated_summary.txt \
         ShortVariantsDB_curated.parquet \
-        ${task.cpus} \${MEM_PER_CPU_GB}
+        ${task.cpus} \${MEM_PER_CPU_GB} 2>&1 | tee output.log
 
     rm -rf tmp_spark
     """
 }
 
 
-
-
 // This rule produces a filtered parquet file commonly used for downstream analysis.
-include { ProduceSummaryPDF as ProduceSummaryPDF_Curated } from './vep_processes.nf'
-include { ProduceSummaryPDF as ProduceSummaryPDF_Unfiltered } from './vep_processes.nf'
+include { ProduceSummaryPDF as ProduceSummaryPDF_Curated } from './modules/vep_processes.nf'
+include { ProduceSummaryPDF as ProduceSummaryPDF_Unfiltered } from './modules/vep_processes.nf'
+
+
+
+
+process buildSummary {
+    
+    input:
+    val input_file
+    val git_hash
+    val cohort_tag
+    path last_outfile
+
+    output:
+    path "launch_report.txt"
+
+    script:
+    """
+    # Convert workflow start datetime to epoch seconds
+    start_sec=\$(date -d "${workflow.start}" +%s)
+
+    # Get current time in epoch seconds
+    end_sec=\$(date +%s)
+
+    # Calculate duration in seconds
+    duration=\$(( end_sec - start_sec ))
+
+    # Convert duration to minutes and seconds
+    minutes=\$(( duration / 60 ))
+    seconds=\$(( duration % 60 ))
+
+    cat <<EOF > launch_report.txt
+    ShortVariants-Annotation ${cohort_tag} run summary:
+    run name: ${workflow.runName}
+    version: ${workflow.manifest.version}
+    configs: ${workflow.configFiles}
+    workDir: ${workflow.workDir}
+    input_file: ${input_file}
+    launch_user: ${workflow.userName}
+    start_time: ${workflow.start}
+    duration: \${minutes} minutes and \${seconds} seconds
+
+    Command:
+    ${workflow.commandLine}
+
+    Git hash working version:
+    commit ${git_hash}
+    """
+
+    stub:
+    """
+    touch launch_report.txt
+    """
+}
+
 
 
 
 // Parameters
+params.dataset_name = "dataset_default"
 params.file_gvcf_path = "${projectDir}/tests/sample_to_gvcf.tsv.gz"
-params.sample_list = "${projectDir}/tests/list_sample.txt"
-params.fasta_ref = "/home/flben/links/projects/rrg-jacquese/LAB_WORKSPACE/RAW_DATA/Genetic/Reference_Data/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
-params.num_batches = 4
-params.count_start = 1
+params.fasta_ref = "/lustre09/project/6008022/LAB_WORKSPACE/RAW_DATA/Genetic/Reference_Data/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+params.vep_cache = "/lustre09/project/6008022/LAB_WORKSPACE/SOFTWARE/VEP/cache/"
+params.batch_size = 4
+params.git_hash = "git -C ${projectDir} rev-parse HEAD".execute().text.trim()
+params.batch_num = -1 // for tuning batch sizes: default -1 means take all batches. 
+                      // Any other number restricts the execution to N number of batches  
 
 workflow {
 
-    // Split the sample list into batches
-    split_ch = SplitSampleList(
-        params.sample_list,
-        params.num_batches,
-        params.count_start
-    )
+    main:
 
-    // Flatten the emitted batch files (so we have individual files)
-    batch_files_ch = split_ch.batch_files.flatten()
+        sample_file_ch  = channel.fromPath(params.file_gvcf_path)
 
-    // Map each batch file to its batch ID and run ProduceTSVPerSample
-    batch_files_ch
-        .map { file ->
-            // Extract batch ID from filename, e.g., batch_0001 → 0001
-            def batch_id = file.getName().replaceAll("batch_", "")
-            tuple(batch_id, file)
-        }
-        .set { batches_with_id_ch }
+        batch_ch = sample_file_ch
+            .splitCsv(sep: '\t', header: true)   // header already present
+            .map { row -> row['Path'] }             // grab filepaths only
+            .buffer( size : params.batch_size, remainder : true)              // split channel into batches of nextflow lists
+            .take(params.batch_num)                                           // for tuning batch sizes: default -1 means take all batches
 
+        // Call the next process using named arguments for everything except the first positional arg
+        producetsv_ch = ProduceTSVPerSample(
+            batch_ch,
+            params.file_gvcf_path,
+            params.fasta_ref
+        )
 
-    // Call the next process using named arguments for everything except the first positional arg
-    producetsv_ch = ProduceTSVPerSample(
-        batches_with_id_ch.map { it[0] },
-        batches_with_id_ch.map { it[1] },
-        params.file_gvcf_path,
-        params.fasta_ref
-    )
+        // Flatten the emitted batch files (so we have individual files)
+        producetsv_files_ch = producetsv_ch.batch_done.flatten()
+        
+        // Map each batch file to its batch ID and run ProduceTSVPerSample
+        producetsv_files_ch
+            .map { file ->
+                // Extract batch ID from filename, e.g., batch_0001 → 0001
+                def batch_id = file.getName().replaceAll("batch_", "").replaceAll("_gvcf_produced", "")
+                tuple(batch_id, file)
+            }
+            .set { producetsv_files_ch_id }
 
-    // Flatten the emitted batch files (so we have individual files)
-    producetsv_files_ch = producetsv_ch.batch_done.flatten()
-    
-    // Map each batch file to its batch ID and run ProduceTSVPerSample
-    producetsv_files_ch
-        .map { file ->
-            // Extract batch ID from filename, e.g., batch_0001 → 0001
-            def batch_id = file.getName().replaceAll("batch_", "").replaceAll("_gvcf_produced", "")
-            tuple(batch_id, file)
-        }
-        .set { producetsv_files_ch_id }
+        MergeTSVParquetByBatch(
+            producetsv_files_ch_id.map { it[0] },
+            producetsv_files_ch_id.map { it[1] }
+        )
 
-    MergeTSVParquetByBatch(
-        producetsv_files_ch_id.map { it[0] },
-        producetsv_files_ch_id.map { it[1] }
-    )
+        // Collect all parquet files and merge them
+        MergeBatches(
+            MergeTSVParquetByBatch.out.collect()
+        )
 
-    // Collect all parquet files and merge them
-    MergeBatches(
-        MergeTSVParquetByBatch.out.collect()
-    )
+        FindUniqShortVariantsVCF(
+            MergeBatches.out
+        )
 
-    FindUniqShortVariantsVCF(
-        MergeBatches.out
-    )
+        // Split VCF filenames into chrom + file
+        vcf_ch = FindUniqShortVariantsVCF.out.chrom_vcfs.flatten()
+            .map { file ->
+                // extract chromosome name from file, e.g., chr1.vcf.gz → chr1
+                def chrom = file.getName().replaceAll("\\.vcf\\.gz\$", "")
+                tuple(chrom, file)
+            }
 
-    // Split VCF filenames into chrom + file
-    vcf_ch = FindUniqShortVariantsVCF.out.chrom_vcfs.flatten()
-        .map { file ->
-            // extract chromosome name from file, e.g., chr1.vcf.gz → chr1
-            def chrom = file.getName().replaceAll("\\.vcf\\.gz\$", "")
-            tuple(chrom, file)
-        }
-    .take(3)  // <-- take only the first 3 chromosomes
+        RunVEPDefault(
+            vcf_ch.map { it[0] },
+            vcf_ch.map { it[1] },
+            params.vep_cache
+        )
 
-    RunVEPDefault(
-        vcf_ch.map { it[0] },
-        vcf_ch.map { it[1] }
-    )
+        RunVEPLoftee(
+            vcf_ch.map { it[0] },
+            vcf_ch.map { it[1] },
+            params.vep_cache
+        )
 
-    RunVEPLoftee(
-        vcf_ch.map { it[0] },
-        vcf_ch.map { it[1] }
-    )
+        RunVEPAlphamissense(
+            vcf_ch.map { it[0] },
+            vcf_ch.map { it[1] },
+            params.vep_cache
+        )
 
-    RunVEPAlphamissense(
-        vcf_ch.map { it[0] },
-        vcf_ch.map { it[1] }
-    )
+        RunVEPSpliceAI(
+            vcf_ch.map { it[0] },
+            vcf_ch.map { it[1] },
+            params.vep_cache
+        )
 
-    RunVEPSpliceAI(
-        vcf_ch.map { it[0] },
-        vcf_ch.map { it[1] }
-    )
+        // Convert each plugin output to Parquet
+        default_parquet_ch = ConvertVEPDefaultParquet('default', RunVEPDefault.out.tsv_vep.collect())
+        loftee_parquet_ch = ConvertVEPLofteeParquet('loftee', RunVEPLoftee.out.tsv_vep.collect())
+        alphamissense_parquet_ch = ConvertVEPAlphamissenseParquet('alphamissense', RunVEPAlphamissense.out.tsv_vep.collect())
+        spliceai_parquet_ch = ConvertVEPSpliceAIParquet('spliceai', RunVEPSpliceAI.out.tsv_vep.collect())
 
-    // Convert each plugin output to Parquet
-    default_parquet_ch = ConvertVEPDefaultParquet('default', RunVEPDefault.out.tsv_vep.collect())
-    loftee_parquet_ch = ConvertVEPLofteeParquet('loftee', RunVEPLoftee.out.tsv_vep.collect())
-    alphamissense_parquet_ch = ConvertVEPAlphamissenseParquet('alphamissense', RunVEPAlphamissense.out.tsv_vep.collect())
-    spliceai_parquet_ch = ConvertVEPSpliceAIParquet('spliceai', RunVEPSpliceAI.out.tsv_vep.collect())
-
-    plugin_parquets_ch = loftee_parquet_ch
-        .mix(alphamissense_parquet_ch)
-        .mix(spliceai_parquet_ch)
-        .collect()
+        plugin_parquets_ch = loftee_parquet_ch
+            .mix(alphamissense_parquet_ch)
+            .mix(spliceai_parquet_ch)
+            .collect()
 
 
-    // Call UnfilteredAnnotation
-    UnfilteredAnnotation(
-        plugin_parquets_ch,  // tuple of plugin parquets
-        default_parquet_ch.plugin_parquet,  // default VEP parquet
-        MergeBatches.out              // unannotated ShortVariants parquet
-    )
+        // Call UnfilteredAnnotation
+        UnfilteredAnnotation(
+            plugin_parquets_ch,  // tuple of plugin parquets
+            default_parquet_ch.plugin_parquet,  // default VEP parquet
+            MergeBatches.out              // unannotated ShortVariants parquet
+        )
 
-    ProduceSummaryPDF_Unfiltered(
-        UnfilteredAnnotation.out
-    )
+        ProduceSummaryPDF_Unfiltered(
+            UnfilteredAnnotation.out
+        )
 
-    CuratedAnnotation(
-        UnfilteredAnnotation.out
-    )
+        CuratedAnnotation(
+            UnfilteredAnnotation.out
+        )
 
-    ProduceSummaryPDF_Curated(
-        UnfilteredAnnotation.out
-    )
+        ProduceSummaryPDF_Curated(
+            UnfilteredAnnotation.out
+        )
+
+        buildSummary  ( params.file_gvcf_path,
+                        params.git_hash,
+                        params.dataset_name,
+                        UnfilteredAnnotation.out
+                    )
+
+    publish:
+        ShortVariantsDB_unfiltered = UnfilteredAnnotation.out
+        ShortVariantsDB_curated = UnfilteredAnnotation.out
+        ShortVariantsDB_unfiltered_pdf = ProduceSummaryPDF_Unfiltered.out
+        ShortVariantsDB_curated_pdf = ProduceSummaryPDF_Curated.out
+        report_summary = buildSummary.out
+}
+
+output {
+    ShortVariantsDB_unfiltered {
+        mode 'copy'
+        path "${params.dataset_name}/"
+    }
+    ShortVariantsDB_curated {
+        mode 'copy'
+        path "${params.dataset_name}/"
+    }
+    ShortVariantsDB_unfiltered_pdf {
+        mode 'copy'
+        path "${params.dataset_name}/docs/"
+    }
+    ShortVariantsDB_curated_pdf {
+        mode 'copy'
+        path "${params.dataset_name}/docs/"
+    }
+    report_summary {
+        mode 'copy'
+        path "${params.dataset_name}/docs/"
+    }
 }
