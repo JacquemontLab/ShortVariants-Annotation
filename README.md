@@ -40,7 +40,9 @@ You might need to pull the following containers if working **offline** (see temp
 ### Download resources
 
 All required pipeline resources (e.g. reference genome, VEP cache, annotation resources) can be downloaded using the provided setup script:
-This can take >1 hour.
+⚠️ This process can take more than 1 hour.
+
+It will require tabix and samtools installed on the system. The BaseSpace CLI will be installed automatically for downloading SpliceAI resources.
 
 ```bash
 bash INSTALL.sh

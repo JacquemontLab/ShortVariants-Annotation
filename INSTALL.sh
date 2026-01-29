@@ -6,6 +6,24 @@ set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Properly propagate errors through pipelines
 
 # ============================
+# Check dependencies
+# ============================
+
+# Check tabix
+if ! command -v tabix >/dev/null 2>&1; then
+    echo "❌ tabix is not installed. Install via: sudo dnf install htslib"
+    exit 1
+fi
+
+# Check samtools and bgzip
+if ! command -v samtools >/dev/null 2>&1 || ! samtools help | grep -q bgzip; then
+    echo "❌ samtools bgzip not available. Install samtools via: sudo dnf install samtools"
+    exit 1
+fi
+
+echo "✅ All dependencies are available"
+
+# ============================
 # Environment Resources Script
 # ============================
 ORIG_DIR=$(pwd)
