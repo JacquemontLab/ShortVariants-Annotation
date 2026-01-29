@@ -30,7 +30,7 @@ Required software:
 * **Nextflow** – workflow engine (nextflow version 25.10.2)
 * **Docker** (Apptainer or Singularity) – to run containers
 
-You might need to pull the following containers if working **offline** (see `nextflow.config`):
+You might need to pull the following containers if working **offline** (see templates `nextflow.config` or to use slurm `setup/nextflow_HPC_slurm.config`):
 * **docker://ghcr.io/jacquemontlab/ensembl_vep_113:latest**
 * **docker://ghcr.io/jacquemontlab/pyspark:latest**
 * **docker://ghcr.io/jacquemontlab/genomics_tools:latest**
