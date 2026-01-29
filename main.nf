@@ -528,9 +528,9 @@ workflow {
 
         // Per-batch: extract SNPs/INDELs → per-sample TSVs
         producetsv_ch = ProduceTSVPerSample(
-            list_sample_to_process: batch_ch,
-            file_gvcf_path: params.file_gvcf_path,
-            fasta_ref: params.fasta_ref
+            list_sample_to_process= batch_ch,
+            file_gvcf_path= params.file_gvcf_path,
+            fasta_ref= params.fasta_ref
         )
 
         // Get (batch_id, batch_dir)
@@ -544,18 +544,18 @@ workflow {
 
         // TSV → Parquet per batch
         MergeTSVParquetByBatch(
-            batch: producetsv_files_ch.map { it[0] },
-            tsv_dir: producetsv_files_ch.map { it[1] }
+            batch= producetsv_files_ch.map { it[0] },
+            tsv_dir= producetsv_files_ch.map { it[1] }
         )
 
         // Merge all batches into one Parquet
         MergeBatches(
-            parquet_files: MergeTSVParquetByBatch.out.collect()
+            parquet_files= MergeTSVParquetByBatch.out.collect()
         )
 
         // Extract unique variants → chromosome VCFs
         FindUniqShortVariantsVCF(
-            parquet_file: MergeBatches.out
+            parquet_file= MergeBatches.out
         )
 
         // Prepare (chrom, vcf) tuples for VEP
@@ -567,10 +567,10 @@ workflow {
             }
 
         // Run VEP annotations
-        RunVEPDefault(      chrom: vcf_ch.map{it[0]}, vcf_file: vcf_ch.map{it[1]}, vep_cache: params.vep_cache )
-        RunVEPLoftee(       chrom: vcf_ch.map{it[0]}, vcf_file: vcf_ch.map{it[1]}, vep_cache: params.vep_cache )
-        RunVEPAlphamissense(chrom: vcf_ch.map{it[0]}, vcf_file: vcf_ch.map{it[1]}, vep_cache: params.vep_cache )
-        RunVEPSpliceAI(     chrom: vcf_ch.map{it[0]}, vcf_file: vcf_ch.map{it[1]}, vep_cache: params.vep_cache )
+        RunVEPDefault(      chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
+        RunVEPLoftee(       chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
+        RunVEPAlphamissense(chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
+        RunVEPSpliceAI(     chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
 
         // Convert VEP outputs to Parquet
         default_parquet_ch = ConvertVEPDefaultParquet('default', RunVEPDefault.out.tsv_vep.collect())
@@ -587,9 +587,9 @@ workflow {
 
         // Merge all annotations → unfiltered DB
         UnFilteredAnnotation(
-            all_plugin_parquets: plugin_parquets_ch,                // list of plugin files
-            vep_default_path: default_parquet_ch.plugin_parquet,    // default VEP parquet
-            parquet_including_all_ShortVariants: MergeBatches.out   // unannotated ShortVariants parquet
+            all_plugin_parquets= plugin_parquets_ch,                // list of plugin files
+            vep_default_path= default_parquet_ch.plugin_parquet,    // default VEP parquet
+            parquet_including_all_ShortVariants= MergeBatches.out   // unannotated ShortVariants parquet
         )
 
 
