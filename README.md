@@ -4,43 +4,76 @@
 
 [![DOI](https://zenodo.org/badge/1021468027.svg)](https://doi.org/10.5281/zenodo.16268986)
 
-# Documentation of the short variants (SNVs and Indels) Annotation Pipeline
 
-This repository contains a bioinformatics pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
+# ShortVariants-Annotation
 
-The workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts, whether using Nextflow or Snakemake.
+#### A Nextflow pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
 
-As a result, three distinct pipelines are available (see the `setup` directory for details):
+## Overview
 
-* **SPARK** — runs on a computing cluster.
-* **UK Biobank (UKBB)** — uses the **UKB-RAP** platform.
-* **All of Us** — uses the **All of Us Researcher Workbench** platform - the pipeline closely resembles the UKBB version but skips the first three steps.
+This workflow is designed to run on different infrastructures. However, since these environments differ significantly in terms of write permissions, architecture, and security settings, we had to rewrite the workflow and some of the initial scripts, whether using Cromwell or Snakemake.
 
-The **All of Us** pipeline directly start by producing the **`Unannotated_ShortVariants.parquet`** file from a provided Hail table.
+As a result, three other pipelines are available (see the `setup` directory for details):
 
----
+* `snakemake` — runs on a **HPC cluster** using Snakemake.
+* `ukbb_dnanexus` **UK Biobank (UKBB)** — uses the **UKB-RAP** platform.
+* `allofus_workbench` **All of Us** — uses the **All of Us Researcher Workbench** platform - the pipeline closely resembles the UKBB version but skips the first three steps.
 
 
-### 🔢 Pipeline Inputs
 
-The pipeline requires **two input files** to be specified in the `config.json`.
-Additionally, the pipeline works with compressed VCF files (`.vcf.gz`) that have been indexed with their corresponding `.vcf.gz.tbi` files.
+## Requirements
 
-#### 1. `list_sample.txt`
+Refer to the template config files and adjust them to match your infrastructure.
 
-A plain text file listing the **sample IDs**, one per line.
-No header should be included.
+Required software:
 
-**Example:**
+* **Nextflow** – workflow engine (nextflow version 25.10.2)
+* **Docker** (Apptainer or Singularity) – to run containers
 
+You might need to pull the following containers if working **offline** (see `nextflow.config`):
+* **docker://ghcr.io/jacquemontlab/ensembl_vep_113:latest**
+* **docker://ghcr.io/jacquemontlab/pyspark:latest**
+* **docker://ghcr.io/jacquemontlab/genomics_tools:latest**
+* **docker://ghcr.io/jacquemontlab/duckdb_python:latest**
+
+
+### Download resources
+
+All required pipeline resources (e.g. reference genome, VEP cache, annotation resources) can be downloaded using the provided setup script:
+This can take >1 hour.
+
+```bash
+bash INSTALL.sh
 ```
-AXXXXX
-BXXXXX
-CXXXXX
-DXXXXX
-```
 
-#### 2. `sample_paths.tsv.gz`
+This script performs the following tasks:
+
+* Downloads the reference genome (GRCh38 by default)
+* Retrieves necessary annotation resources:
+  * VEP cache
+  * AlphaMissense data
+  * LoFTEE plugin
+  * SpliceAI scores
+
+
+
+## Inputs
+
+
+| Parameter          | Description                                         | Default    |
+| ------------------ | --------------------------------------------------- | ---------- |
+| `--dataset_name`   | Name of the dataset, used for directory and report naming.    | dataset_default    |
+| `--file_gvcf_path` | A gzip-compressed, tab-separated file that maps each `sampleID` to its corresponding file path, see `Parameter Details`.    | *Required*    |
+| `--fasta_ref` | The downloaded `GRCh38_full_analysis_set_plus_decoy_hla.fa.gz`.    | *Required*    |
+| `--vep_cache` | The downloaded directory `resources/vep_cache/`.    | *Required*    |
+| `--batch_size` | Number of samples call in a single batch.    | 64    |
+
+
+### Parameter Details
+
+The pipeline works with compressed VCF files (`.vcf.gz`) that have been indexed with their corresponding `.vcf.gz.tbi` files.
+
+#### `sample_to_gvcf.tsv.gz`
 
 A **gzip-compressed, tab-separated file** that maps each `sampleID` to its corresponding file path.
 
@@ -54,161 +87,63 @@ CXXXXX	    /absolute/path/to/sample_C.vcf.gz
 DXXXXX	    /absolute/path/to/sample_D.vcf.gz
 ```
 
-> For the **SPARK\_iwesv3** dataset, each `sampleID` is expected to have **two entries**,
-> one with **"deepvariant"** and one with **"gatk"** appearing **anywhere in the absolute path**.
 
-Each sample appears **twice**, with different variant callsets:
+## Usage
 
-```
-sampleID	Path
-SPARK_001	/data/SPARK_iwesv3/SPARK_001/deepvariant/SPARK_001.deepvariant.vcf.gz
-SPARK_001	/data/SPARK_iwesv3/SPARK_001/gatk/SPARK_001.gatk.vcf.gz
-SPARK_002	/data/SPARK_iwesv3/SPARK_002/deepvariant/SPARK_002.deepvariant.vcf.gz
-SPARK_002	/data/SPARK_iwesv3/SPARK_002/gatk/SPARK_002.gatk.vcf.gz
-SPARK_003	/data/SPARK_iwesv3/SPARK_003/deepvariant/SPARK_003.deepvariant.vcf.gz
-SPARK_003	/data/SPARK_iwesv3/SPARK_003/gatk/SPARK_003.gatk.vcf.gz
-```
+### Testing
 
-
-> ⚠️ Ensure that every sample listed in `list_sample.txt` has at least one matching path in `sample_paths.tsv.gz`.
-
-
-### ⚙️ Installation & Setup
-
-All necessary pipeline prerequisites (e.g. reference genome, VEP cache, annotation resources, virtual environment setup) can be installed using the provided setup script:
+The pipeline can be tested using the test profile and the images hosted on github using the container of your choice. 
 
 ```bash
-bash setup.sh
+container=docker # or apptainer or singularity
+
+nextflow run main.nf -profile test,${container}
 ```
 
-This script performs the following tasks:
+### Example
 
-* Creates a Python virtual environment with required packages
-* Downloads the reference genome (GRCh38 by default)
-* Retrieves necessary annotation resources:
+```bash
+file_gvcf_path=$PWD/tests/sample_to_gvcf.tsv.gz
+fasta_ref=$PWD/resources//reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz
+vep_cache=$PWD/resources/vep_cache/
+container=docker # or apptainer or singularity
 
-  * VEP cache
-  * AlphaMissense data
-  * LoFTEE plugin
-  * SpliceAI scores
-* Prepares the environment for downstream analysis
+nextflow run main.nf \
+    --dataset_name Dataset \
+    --file_gvcf_path "$file_gvcf_path" \
+    --fasta_ref "$fasta_ref" \
+    --vep_cache "$vep_cache" \
+    --batch_size 16 \
+    -profile ${container}
+```
+
+Here’s a corrected and cleaner version of your section:
+
+### Running on Compute Canada (CCDB, lab)
+
+Users on CCDB can run the pipeline offline, since the required resources and Docker/Apptainer containers are already available on Rorqual:
+
+```bash
+export NXF_OFFLINE=true
+module load nextflow
+module load apptainer
+
+file_gvcf_path=$PWD/tests/sample_to_gvcf.tsv.gz
+
+nextflow run main.nf \
+    --dataset_name Dataset \
+    --file_gvcf_path "$file_gvcf_path" \
+    -c setup/nextflow_HPC_slurm.config
+```
 
 
 
-## Different Steps of the Pipeline
-This repository provides a workflow implemented in Snakemake or Nextflow for processing and annotating short variants (SNVs and Indels) on the human reference genome **GRCh38**.
 
-### Workflow DAG
-Below is a graphical representation of the workflow:
+## Outputs
 
-![Workflow DAG](img/dag.png)
+There are two output tables:
 
-### Prerequisite to run the Snakefile pipeline: Downloading the Raw Data
-
-gVCF files need to be available.
-We do not use the pVCF files as they contain excessive information that is unnecessary for our purposes.
-
-### 1. Splitting Sample List
-The list of samples is split into batches to increase processing speed (**`split_sample_list`** step).
-
-### 2. Filtering gVCF and taking intersection between callers if multiple are available (e.g., in the case of SPARK)
-
-This step may need to be adapted depending on the dataset you are working with. For SPARK, it processes two VCF files per sample and retains only their intersection. In contrast, for UKBB, it processes a single VCF file per sample.
-
-
-The gVCF files are filtered to retain only:
-
--   **Non Homozygous reference sites** — Removing `0/0` or `./.` to keep only variant sites.
-  
-  Some SNPs appear as `1/0` because they were originally multiallelic (e.g., `GT=2/3`) in the raw gVCF. After normalization, each alternate allele is represented separately, resulting in genotypes like `0/1` and `1/0`. As a result, the total depth (`DP`) may differ from the sum of `REF_AD` and `ALT_AD`.
-
--   **Indels**
-
--   **SNPs**
-
-This corresponds to the **`produce_tsv_per_sample_SPARK`** step in the SPARK Snakemake workflow, or to **`ProduceTSVPerSampleUKBB`** in the UKBB Nextflow pipeline.
-
-### 3. Merging TSV to Parquet
-
-The merging is done in two steps:
-
-1\. Batch merge (**`merge_tsv_parquet_by_batch`**)
-
-2\. Merge of batches (**`merge_batches`**)
-
-This approach enables parallelization and significantly increases speed. The output file is **`Unannotated_ShortVariants.parquet`**.
-
-### 4. Identifying Unique short variants (SNVs and Indels)
-
-Unique short variants are extracted to avoid redundant annotation during the VEP step.
-The output consists of VCF files per chromosome, used for VEP annotation (**`find_uniq_ShortVariants_vcf`** step).
-
-### 5. VEP Annotation
-
-Each chromosome's unique short variants (SNVs and Indels) are annotated using **VEP**. Different annotations:
-
--   **Default VEP annotation**: Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_, gnomADg_ (**`run_vep_default`**)
-
--   **LoFtee plugin**: LoF, LoF_filter, LoF_flags, LoF_info (**`run_vep_plugin_loftee`**)
-
--   **AlphaMissense plugin**: am_class, am_pathogenicity scores (**`run_vep_plugin_alphamissense`**)
-
--   **SpliceAI plugin**: SpliceAI_pred including SYMBOL\|DS_AG\|DS_AL\|DS_DG\|DS_DL\|DP_AG\|DP_AL\|DP_DG\|DP_DL (**`run_vep_plugin_spliceai`**)
-
-### 6. Reformatting VEP Output
-
-The VEP output is reformatted per plugin, for example **SpliceAI_pred** is split into separate columns, the maximum AF across gnomAD population is computed.
-Only unique short variants (SNVs and Indels) with an annotation of the given plugin are retained, reducing file size and computation time (**`convert_vep_out_parquet`** rule).
-
-### 7. Creating an Unfiltered Annotation
-
-This is the most resources consuming step, it merges **`Unannotated_ShortVariants.parquet`** with plugin annotations.
-The output is **`ShortVariantsDB_unfiltered.parquet`**, partitioned by chromosome (**`unfiltered_annotation`** rule).
-
-To reduce the size of the database, we removed:
-
--   **Short variants for which both MANE and CANONICAL annotations are null**
-
-### 8. Curating Annotation
-
-This step filters data to generate a more relevant downstream dataset (**`curated_annotation`** rule). The dataset correspond to **`ShortVariantsDB_curated.parquet`**.
-
-Key processing steps:
-
--   **Compute Allele Count Ratio**: `AC_ratio = ALT_AD / DP`
-
--   **Compute Max_DS_SpliceAI**: `max(DS_AG, DS_AL, DS_DG, DS_DL)`
-
--   **Filter short variants**: - DP \≥ 20 - GQ \≥ 30 - 0.2 \≤ AC_ratio \≤ 0.8
-
--   **Filter short variants with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 and dataset_AF \≤ 0.001
-
--   **Identify Variant Types**:
-
-if Consequence is `synonymous_variant` → **Synonymous**
-
-if the first consequence is `stop_gained` → **Stop_Gained**
-
-if the first consequence is `frameshift_variant` → **Frameshift**
-
-if the first consequence is `splice_acceptor_variant` or `splice_donor_variant` → **Splice_variants**
-
-if the first consequence is `missense_variant` → **Missense**
-
--   **Retain Variants Based on Criteria**:
-
-**Synonymous**
-
-**Stop_Gained** (LoF = HC , high-confidence LoF variants)
-
-**Frameshift** (LoF = HC , high-confidence LoF variants)
-
-**Splice_variants** (Max_DS_SpliceAI ≥ 0.8 , 'high precision')
-
-**Missense** (am_pathogenicity ≥ 0.564 , 'likely_pathogenic')
-
-## Output format of **`ShortVariantsDB_curated.parquet`**
-
+### Output format of **`ShortVariantsDB_curated.parquet`**
 
 | Column name | Label | Description |
 |------------------|------------------|------------------------------------|
@@ -236,8 +171,7 @@ if the first consequence is `missense_variant` → **Missense**
 | **Max_DS_SpliceAI** | Maximum SpliceAI Delta Score | Maximum SpliceAI delta score for splicing impact. |
 
 
-## Output format of **`ShortVariantsDB_unfiltered.parquet`**
-
+### Output format of **`ShortVariantsDB_unfiltered.parquet`**
 
 | Column name | Label | Description |
 |-------------|-------|-------------|
@@ -278,6 +212,121 @@ if the first consequence is `missense_variant` → **Missense**
 
 
 
+
+
+
+## Different Steps of the Pipeline
+This repository provides a workflow implemented in Nextflow (with alternative implementations in Cromwell and Snakemake under `setup`) for processing and annotating short variants (SNVs and Indels) on the human reference genome **GRCh38**.
+
+### Prerequisite to run the pipeline: Downloading the Raw Data
+
+gVCF files need to be available.
+We do not use the pVCF files as they contain excessive information that is unnecessary for our purposes.
+
+### 1. Filtering gVCF and taking intersection between callers if multiple are available (e.g., in the case of SPARK)
+
+⚠️**This step may need to be adapted depending on the dataset you are working with**⚠️.
+For SPARK, it processes two VCF files per sample and retains only their intersection. In contrast, for UKBB, it processes a single VCF file per sample.
+
+
+The gVCF files are filtered to retain only:
+
+-   **Non Homozygous reference sites** — Removing `0/0` or `./.` to keep only variant sites.
+  
+  Some SNPs appear as `1/0` because they were originally multiallelic (e.g., `GT=2/3`) in the raw gVCF. After normalization, each alternate allele is represented separately, resulting in genotypes like `0/1` and `1/0`. As a result, the total depth (`DP`) may differ from the sum of `REF_AD` and `ALT_AD`.
+
+-   **Indels**
+
+-   **SNPs**
+
+This corresponds to the **`ProduceTSVPerSample`** process.
+(The **`produce_tsv_per_sample_SPARK`** step in the Snakemake workflow, or to **`ProduceTSVPerSampleUKBB`** in the UKBB Nextflow pipeline.)
+
+### 3. Merging TSV to Parquet
+
+The merging is done in two steps:
+
+1\. Batch merge (**`MergeTSVParquetByBatch`**)
+
+2\. Merge of batches (**`MergeBatches`**)
+
+This approach enables parallelization and significantly increases speed. The output file is **`Unannotated_ShortVariants.parquet`**.
+
+### 4. Identifying Unique short variants (SNVs and Indels)
+
+Unique short variants are extracted to avoid redundant annotation during the VEP step.
+The output consists of VCF files per chromosome, used for VEP annotation (**`FindUniqShortVariantsVCF`** step).
+
+### 5. VEP Annotation
+
+Each chromosome's unique short variants (SNVs and Indels) are annotated using **VEP**. Different annotations:
+
+-   **Default VEP annotation**: Consequence, CANONICAL, MANE, MAX_AF, MAX_AF_POPS, gnomADe_, gnomADg_ (**`RunVEPDefault`**)
+
+-   **LoFtee plugin**: LoF, LoF_filter, LoF_flags, LoF_info (**`RunVEPLoftee`**)
+
+-   **AlphaMissense plugin**: am_class, am_pathogenicity scores (**`RunVEPAlphamissense`**)
+
+-   **SpliceAI plugin**: SpliceAI_pred including SYMBOL\|DS_AG\|DS_AL\|DS_DG\|DS_DL\|DP_AG\|DP_AL\|DP_DG\|DP_DL (**`RunVEPSpliceAI`**)
+
+### 6. Reformatting VEP Output
+
+The VEP output is reformatted per plugin, for example **SpliceAI_pred** is split into separate columns, the maximum AF across gnomAD population is computed.
+Only unique short variants (SNVs and Indels) with an annotation of the given plugin are retained, reducing file size and computation time (**`ConvertVEPOutParquet`** process).
+
+### 7. Creating an Unfiltered Annotation
+
+This is the most resources consuming step, it merges **`Unannotated_ShortVariants.parquet`** with plugin annotations.
+The output is **`ShortVariantsDB_unfiltered.parquet`**, partitioned by chromosome (**`UnFilteredAnnotation`** process).
+
+To reduce the size of the database, we removed:
+
+-   **Short variants for which both MANE and CANONICAL annotations are null**
+
+### 8. Curating Annotation
+
+This step filters data to generate a more relevant downstream dataset (**`CuratedAnnotation`** process). The dataset correspond to **`ShortVariantsDB_curated.parquet`**.
+
+Key processing steps:
+
+-   **Compute Allele Count Ratio**: `AC_ratio = ALT_AD / DP`
+
+-   **Compute Max_DS_SpliceAI**: `max(DS_AG, DS_AL, DS_DG, DS_DL)`
+
+-   **Filter short variants**: - DP \≥ 20 - GQ \≥ 30 - 0.2 \≤ AC_ratio \≤ 0.8
+
+-   **Filter short variants with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 and dataset_AF \≤ 0.001
+
+-   **Identify Variant Types**:
+
+if Consequence is `synonymous_variant` → **Synonymous**
+
+if the first consequence is `stop_gained` → **Stop_Gained**
+
+if the first consequence is `frameshift_variant` → **Frameshift**
+
+if the first consequence is `splice_acceptor_variant` or `splice_donor_variant` → **Splice_variants**
+
+if the first consequence is `missense_variant` → **Missense**
+
+-   **Retain Variants Based on Criteria**:
+
+**Synonymous**
+
+**Stop_Gained** (LoF = HC , high-confidence LoF variants)
+
+**Frameshift** (LoF = HC , high-confidence LoF variants)
+
+**Splice_variants** (Max_DS_SpliceAI ≥ 0.8 , 'high precision')
+
+**Missense** (am_pathogenicity ≥ 0.564 , 'likely_pathogenic')
+
+### Workflow DAG
+Below is a graphical representation of the workflow:
+
+![Workflow DAG](img/dag.png)
+
+
 ## More Documentation
 Here are some useful links about the plugins used in this pipeline, provided by VEP (Variant Effect Predictor).
 
@@ -296,7 +345,7 @@ We used the VEP docker: ensembl-vep release_113.3
 
 ## Current Limitations of the pipeline
 - Only work for human reference genome version **GRCh38**, but can easly be adaptated for other version.
-Indeed the plugin resources used are provided for version **GRCh37**.
+Indeed the plugin resources used are provided for version **GRCh37** (except LoFtee).
 
 - Resource requirements of each step must be adjusted depending on the quantity of data analyzed.
 
