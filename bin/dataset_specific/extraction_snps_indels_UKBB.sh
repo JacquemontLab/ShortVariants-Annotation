@@ -39,7 +39,7 @@ trap "rm -rf ${tempdir_path}" EXIT  # Ensure cleanup on exit
 
 
 # Create a directory for storing intermediate and final files
-extension_path=${tempdir_path}${sample}_
+extension_path=${tempdir_path}${sample}
 
 # Extract SNPs and Indels from the gVCF input file, normalize, filter non-homozygous ref variants and ./., and compress the output
 bcftools view -v snps,indels --threads ${cpu} ${input_gvcf} | \
