@@ -347,7 +347,7 @@ include { ConvertVEPOutParquet as ConvertVEPSpliceAIParquet } from './modules/ve
 
 
 // This rule annotates all short variants (SNVs and Indels) by merging unannotated short variants with VEP default annotations and plugin-based annotations of unique short variants.
-process UnfilteredAnnotation {
+process UnFilteredAnnotation {
     label "pyspark"
 
     input:
@@ -600,34 +600,34 @@ workflow {
             .collect()
 
 
-        // Call UnfilteredAnnotation
-        UnfilteredAnnotation(
+        // Call UnFilteredAnnotation
+        UnFilteredAnnotation(
             plugin_parquets_ch,  // tuple of plugin parquets
             default_parquet_ch.plugin_parquet,  // default VEP parquet
             MergeBatches.out              // unannotated ShortVariants parquet
         )
 
         ProduceSummaryPDF_Unfiltered(
-            UnfilteredAnnotation.out
+            UnFilteredAnnotation.out
         )
 
         CuratedAnnotation(
-            UnfilteredAnnotation.out
+            UnFilteredAnnotation.out
         )
 
         ProduceSummaryPDF_Curated(
-            UnfilteredAnnotation.out
+            UnFilteredAnnotation.out
         )
 
         buildSummary  ( params.file_gvcf_path,
                         params.git_hash,
                         params.dataset_name,
-                        UnfilteredAnnotation.out
+                        UnFilteredAnnotation.out
                     )
 
     publish:
-        ShortVariantsDB_unfiltered = UnfilteredAnnotation.out
-        ShortVariantsDB_curated = UnfilteredAnnotation.out
+        ShortVariantsDB_unfiltered = UnFilteredAnnotation.out
+        ShortVariantsDB_curated = UnFilteredAnnotation.out
         ShortVariantsDB_unfiltered_pdf = ProduceSummaryPDF_Unfiltered.out
         ShortVariantsDB_curated_pdf = ProduceSummaryPDF_Curated.out
         report_summary = buildSummary.out
