@@ -605,7 +605,7 @@ workflow {
         buildSummary  ( params.file_gvcf_path,
                         params.git_hash,
                         params.dataset_name,
-                        UnFilteredAnnotation.out
+                        CuratedAnnotation.out
                     )
 
     publish:
