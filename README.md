@@ -94,7 +94,8 @@ DXXXXX	    /absolute/path/to/sample_D.vcf.gz
 
 ### Testing
 
-The pipeline can be tested using the test profile and the images hosted on github using the container of your choice. 
+The pipeline can be tested using the test profile and the images hosted on github using the container of your choice.
+Unfortunately, the test will fail at the Curated steps because it uses a small test dataset. Those, allele frequency (AF) filtering will remove all the short variants.
 
 ```bash
 container=docker # or apptainer or singularity
