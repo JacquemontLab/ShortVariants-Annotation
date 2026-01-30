@@ -599,18 +599,18 @@ workflow {
         // Reports + curated dataset
         ProduceSummaryPDF_Unfiltered(UnFilteredAnnotation.out)
         CuratedAnnotation(UnFilteredAnnotation.out)
-        ProduceSummaryPDF_Curated(UnFilteredAnnotation.out)
+        ProduceSummaryPDF_Curated(CuratedAnnotation.out.curated_parquet)
 
         // Run metadata summary
         buildSummary  ( params.file_gvcf_path,
                         params.git_hash,
                         params.dataset_name,
-                        CuratedAnnotation.out
+                        CuratedAnnotation.out.curated_parquet
                     )
 
     publish:
         ShortVariantsDB_unfiltered = UnFilteredAnnotation.out
-        ShortVariantsDB_curated = UnFilteredAnnotation.out
+        ShortVariantsDB_curated = CuratedAnnotation.out.curated_parquet
         ShortVariantsDB_unfiltered_pdf = ProduceSummaryPDF_Unfiltered.out
         ShortVariantsDB_curated_pdf = ProduceSummaryPDF_Curated.out
         report_summary = buildSummary.out
