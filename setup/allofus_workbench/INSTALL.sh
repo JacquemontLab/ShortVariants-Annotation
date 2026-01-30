@@ -9,9 +9,6 @@ set -o pipefail  # Properly propagate errors through pipelines
 # ============================
 ORIG_DIR=$(pwd)
 
-echo "🧬 Downloading reference genome... (requires samtools and htslib)"
-bash resources/requirement/ref_genome.sh  # ⚠️ Ensure compatibility with your dataset
-
 echo "🧬 Downloading VEP cache... (requires apptainer)"
 bash resources/requirement/vep_requirement/get_assembly_cache.sh
 

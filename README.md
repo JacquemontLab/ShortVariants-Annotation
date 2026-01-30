@@ -73,7 +73,7 @@ This script performs the following tasks:
 
 ### Parameter Details
 
-The pipeline works with compressed VCF files (`.vcf.gz`) that have been indexed with their corresponding `.vcf.gz.tbi` files.
+The pipeline works with compressed VCF files (`*vcf.gz`).
 
 #### `sample_to_gvcf.tsv.gz`
 

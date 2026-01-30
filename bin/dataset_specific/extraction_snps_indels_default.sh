@@ -16,7 +16,6 @@ cpu=${5:-$(nproc)}  # Use provided CPU count or default to the number of availab
 
 echo "Processing sample: ${sample}"
 echo "Threads used: ${cpu}"
-echo "TMPDIR: ${TMPDIR}"
 
 # Check if required input files exist before proceeding
 for file in "$input_gvcf" "$fasta_ref"; do

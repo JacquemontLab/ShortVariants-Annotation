@@ -13,6 +13,7 @@ process ProduceTSVPerSample {
     path list_sample_to_process
     path file_gvcf_path
     path fasta_ref
+    path fasta_ref_index
 
     output:
     path "batch_${task.index}", emit: tsv_dir
@@ -515,6 +516,7 @@ params.batch_num = -1 // for tuning batch sizes: default -1 means take all batch
 workflow {
 
     main:
+        params.fasta_ref_index = params.fasta_ref + ".gzi"
 
         // Read TSV listing gVCF paths
         sample_file_ch  = channel.fromPath(params.file_gvcf_path)
@@ -530,7 +532,8 @@ workflow {
         producetsv_ch = ProduceTSVPerSample(
             list_sample_to_process= batch_ch,
             file_gvcf_path= params.file_gvcf_path,
-            fasta_ref= params.fasta_ref
+            fasta_ref= params.fasta_ref,
+            fasta_ref_index= params.fasta_ref_index,
         )
 
         // Get (batch_id, batch_dir)
