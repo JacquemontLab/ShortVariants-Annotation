@@ -210,6 +210,7 @@ task ProduceTSVPerSampleUKBB {
     # Download reference genome
     dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
     dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz.gzi"
+    dx download "~{project}:ShortVariants-Annotation/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz.fai"
     fasta_ref="GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
 
     # Load Docker image
