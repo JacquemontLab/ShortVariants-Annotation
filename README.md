@@ -298,7 +298,7 @@ Key processing steps:
 
 -   **Filter short variants**: - DP \≥ 20 - GQ \≥ 30 - 0.2 \≤ AC_ratio \≤ 0.8
 
--   **Filter short variants with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 and dataset_AF \≤ 0.001
+-   **Filter short variants with Allele Frequency below 0.001**: - gnomAD_max_AF \≤ 0.001 (and, if the number of samples ≥ 5000: dataset_AF ≤ 0.001)
 
 -   **Identify Variant Types**:
 
