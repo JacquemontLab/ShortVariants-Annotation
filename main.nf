@@ -14,6 +14,7 @@ process ProduceTSVPerSample {
     path file_gvcf_path
     path fasta_ref
     path fasta_ref_index
+    path fasta_ref_fai
 
     output:
     path "batch_${task.index}", emit: tsv_dir
@@ -89,7 +90,7 @@ process MergeTSVParquetByBatch {
     echo "Using ${task.cpus} CPUs"
     echo "Memory per CPU: \${MEM_PER_CPU_GB} GB"
 
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/generate_parquet_all_ShortVariants.py \
         ${tsv_dir}/ \
         Unannotated_ShortVariants_batch_${batch}.parquet \
@@ -135,7 +136,7 @@ process MergeBatches {
     echo "Merging batches:"
     echo "${batches_files}"
 
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/merge_parquets.py \
         ${batches_files} \
         Unannotated_ShortVariants.parquet \
@@ -175,7 +176,7 @@ process FindUniqShortVariantsVCF {
     mkdir -p vcf_uniq_ShortVariants/
 
     # Extract unique ShortVariants into chromosome-specific VCFs
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/generate_parquet_uniq_ShortVariants.py \
         ${parquet_file} \
         vcf_uniq_ShortVariants/ \
@@ -383,7 +384,7 @@ process UnFilteredAnnotation {
     mkdir -p tmp_spark
     export SPARK_LOCAL_DIRS=tmp_spark
 
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/unfiltered_annotation.py \
         ${parquet_including_all_ShortVariants} \
         ${vep_default_path} \
@@ -430,7 +431,7 @@ process CuratedAnnotation {
     mkdir -p tmp_spark
     export SPARK_LOCAL_DIRS=tmp_spark
 
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/curated_annotation.py \
         ${ShortVariants_annotated_parquet} \
         ShortVariantsDB_curated_summary.txt \
@@ -517,6 +518,7 @@ workflow {
 
     main:
         params.fasta_ref_index = params.fasta_ref + ".gzi"
+        params.fasta_ref_fai = params.fasta_ref + ".fai"
 
         // Read TSV listing gVCF paths
         sample_file_ch  = channel.fromPath(params.file_gvcf_path)
@@ -534,6 +536,7 @@ workflow {
             file_gvcf_path= params.file_gvcf_path,
             fasta_ref= params.fasta_ref,
             fasta_ref_index= params.fasta_ref_index,
+            fasta_ref_fai= params.fasta_ref_fai
         )
 
         // Get (batch_id, batch_dir)
@@ -605,7 +608,7 @@ workflow {
         buildSummary  ( params.file_gvcf_path,
                         params.git_hash,
                         params.dataset_name,
-                        ProduceSummaryPDF_Curated.out
+                        ProduceSummaryPDF_Unfiltered.out
                     )
 
     publish:

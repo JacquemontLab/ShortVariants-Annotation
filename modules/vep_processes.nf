@@ -38,7 +38,7 @@ process ConvertVEPOutParquet {
     mkdir -p plugins/
 
     echo "Converting VEP output for plugin: ${plugin} to Parquet"
-    /opt/spark/bin/spark-submit --driver-memory \${MEM_PER_CPU_GB}g \
+    /opt/spark/bin/spark-submit --driver-memory \${MEM_GB}g \
         /usr/bin/convert_vep_output_parquet.py \
         vep_annotation/ \
         plugins/${plugin}.parquet \

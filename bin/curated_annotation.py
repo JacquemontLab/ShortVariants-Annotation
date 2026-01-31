@@ -155,8 +155,24 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
 
     ### Rare variant filtering
 
-    # Filter short variants with gnomAD_max_AF <= 0.1%
-    ShortVariants_chrom = ShortVariants_chrom.filter((ShortVariants_chrom.gnomAD_max_AF <= 0.001) & (ShortVariants_chrom.dataset_AF <= 0.001) )
+    # Apply rare-variant filters based on cohort size
+    # Threshold used: minor allele frequency ≤ 0.1% (0.001)
+
+    if unique_iid_count >= 5000:
+        # For large cohorts (≥ 5000 individuals),
+        # enforce rarity both in external reference (gnomAD)
+        # and within the studied dataset to avoid cohort-specific common variants
+        ShortVariants_chrom = ShortVariants_chrom.filter(
+            (ShortVariants_chrom.gnomAD_max_AF <= 0.001) &
+            (ShortVariants_chrom.dataset_AF <= 0.001)
+        )
+    else:
+        # For smaller cohorts,
+        # rely only on gnomAD frequency since internal AF estimates
+        # may be unstable due to limited sample size
+        ShortVariants_chrom = ShortVariants_chrom.filter(
+            ShortVariants_chrom.gnomAD_max_AF <= 0.001
+        )
 
     # Count unique (SampleID, ShortVariants_ID) pairs
     unique_iid_ShortVariants_count_qc_rare = ShortVariants_chrom.select(countDistinct("SampleID", "ID")).collect()[0][0]
