@@ -578,11 +578,11 @@ task ProduceSummaryPDF {
     # Unpack the unfiltered parquet archive into current directory
     tar --use-compress-program=pigz -xf ~{ShortVariants_annotated_parquet}
 
-    python /usr/bin/pdf_dictionnary.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
+    python /usr/bin/pdf_columns_report.py "~{file}.parquet" ~{cpu} ~{mem_per_cpu}
   >>>
 
   output {
-    File pdf_file = "~{file}_dictionary.pdf"
+    File pdf_file = "~{file}_columns_report.pdf"
   }
   
   runtime {

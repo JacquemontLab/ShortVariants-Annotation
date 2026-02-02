@@ -61,7 +61,7 @@ process ProduceSummaryPDF {
 
     // Outputs
     output:
-    path "${ShortVariants_annotated_parquet.baseName}_dictionary.pdf", emit: pdf_file
+    path "${ShortVariants_annotated_parquet.baseName}_columns_report.pdf", emit: pdf_file
 
     script:
     // Compute memory in GB if task.memory exists; else leave null
@@ -82,7 +82,7 @@ process ProduceSummaryPDF {
     echo "Using ${task.cpus} CPUs"
     echo "Memory per CPU: \${MEM_PER_CPU_GB} GB"
 
-    timedev -v /usr/bin/pdf_dictionnary.py \
+    timedev -v /usr/bin/pdf_columns_report.py \
         ${ShortVariants_annotated_parquet} \
         ${task.cpus} \
         \${MEM_PER_CPU_GB}

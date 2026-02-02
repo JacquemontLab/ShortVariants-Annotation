@@ -60,8 +60,8 @@ rule all:
     input:
         expand(pathResults  + "ShortVariantsDB_curated.parquet"),
         expand(pathResults  + "ShortVariantsDB_unfiltered.parquet"),
-        expand(pathResults  + "ShortVariantsDB_curated_dictionary.pdf"),
-        expand(pathResults  + "ShortVariantsDB_unfiltered_dictionary.pdf")
+        expand(pathResults  + "ShortVariantsDB_curated_columns_report.pdf"),
+        expand(pathResults  + "ShortVariantsDB_unfiltered_columns_report.pdf")
 
 
 
@@ -524,10 +524,10 @@ rule produce_summary_pdf:
     input: 
         ShortVariants_annotated_parquet = pathResults  + "{file}.parquet"
     output:
-        pdf_file = pathResults  + "{file}_dictionary.pdf"
+        pdf_file = pathResults  + "{file}_columns_report.pdf"
     shell:
         """
         source {path_venv}bin/activate
 
-        /usr/bin/time -v python {pathScripts}pdf_dictionnary.py {input.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
+        /usr/bin/time -v python {pathScripts}pdf_columns_report.py {input.ShortVariants_annotated_parquet} {resources.cpus} {resources.mem_per_cpu}
         """
