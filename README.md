@@ -7,7 +7,7 @@
 
 # ShortVariants-Annotation
 
-#### A Nextflow pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k vcf) using Ensembl’s Variant Effect Predictor (VEP).
+#### A Nextflow pipeline for annotating short variants (SNVs and Indels) on large dataset (>100k gVCFs) using Ensembl’s Variant Effect Predictor (VEP).
 
 ## Overview
 
@@ -73,7 +73,7 @@ This script performs the following tasks:
 
 ### Parameter Details
 
-The pipeline works with compressed VCF files (`*vcf.gz`).
+The pipeline works with compressed gVCF files (`*gvcf.gz`).
 
 #### `sample_to_gvcf.tsv.gz`
 
@@ -83,10 +83,10 @@ A **gzip-compressed, tab-separated file** that maps each `sampleID` to its corre
 
 ```
 sampleID	Path
-AXXXXX	    /absolute/path/to/sample_A.vcf.gz
-BXXXXX	    /absolute/path/to/sample_B.vcf.gz
-CXXXXX	    /absolute/path/to/sample_C.vcf.gz
-DXXXXX	    /absolute/path/to/sample_D.vcf.gz
+AXXXXX	    /absolute/path/to/sample_A.gvcf.gz
+BXXXXX	    /absolute/path/to/sample_B.gvcf.gz
+CXXXXX	    /absolute/path/to/sample_C.gvcf.gz
+DXXXXX	    /absolute/path/to/sample_D.gvcf.gz
 ```
 
 
@@ -229,7 +229,7 @@ We do not use the pVCF files as they contain excessive information that is unnec
 ### 1. Filtering gVCF and taking intersection between callers if multiple are available (e.g., in the case of SPARK)
 
 ⚠️**This step may need to be adapted depending on the dataset you are working with**⚠️.
-For SPARK, it processes two VCF files per sample and retains only their intersection. In contrast, for UKBB, it processes a single VCF file per sample.
+For SPARK, it processes two gVCF files per sample and retains only their intersection. In contrast, for UKBB, it processes a single gVCF file per sample.
 
 
 The gVCF files are filtered to retain only:
