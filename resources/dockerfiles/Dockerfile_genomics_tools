@@ -36,14 +36,8 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.21/bcftools-1.
 # Copy your Python script into /usr/bin
 COPY bin/* /usr/bin/
 
-# Create a non-root user and switch to it
-RUN useradd -m -u 1000 flben
-
 # Make sure the script is executable
 RUN chmod +x /usr/bin/*
-RUN chown flben:flben /usr/bin/* && chmod +x /usr/bin/*
-
-USER flben
 
 # Install dxpy
 RUN pip install dxpy
