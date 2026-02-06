@@ -41,7 +41,7 @@ trap "rm -rf ${tempdir_path}" EXIT  # Ensure cleanup on exit
 # Create a directory for storing intermediate and final files
 extension_path=${tempdir_path}${sample}
 
-# Extract SNPs and Indels from the gVCF input file, normalize, filter non-homozygous ref variants and ./., and compress the output
+# Extract and normalize SNPs/Indels, filter out homozygous ref and missing genotypes or missing metrics (DP=depth, AD=allele depth, GQ=genotype quality), and compress output
 bcftools view -v snps,indels --threads ${cpu} ${input_gvcf} | \
     bcftools norm -m- --threads ${cpu} --force | \
     bcftools view -v snps,indels -e 'GT="0/0" || GT="0|0" || GT="./." || GT=".|." || FMT/DP="." || FMT/AD="." || FMT/GQ="."' --threads ${cpu} | \

@@ -43,7 +43,7 @@ trap "rm -rf ${tempdir_path}" EXIT  # Ensure cleanup on exit
 # Create a directory for storing intermediate and final files
 extension_path=${tempdir_path}${sample}
 
-# Extract SNPs and Indels from the GATK input file, normalize, filter non-homozygous ref variants and ./., and compress the output
+# Extract and normalize SNPs/Indels from GATK, filter out homozygous ref and missing genotypes or missing metrics (DP=depth, AD=allele depth, GQ=genotype quality), and compress output
 bcftools view -v snps,indels --threads ${cpu} ${input_gatk} | \
     bcftools norm -m- --threads ${cpu} | \
     bcftools view -v snps,indels -e 'GT="0/0" || GT="0|0" || GT="./." || GT=".|." || FMT/DP="." || FMT/AD="." || FMT/GQ="."' --threads ${cpu} | \
@@ -55,10 +55,10 @@ bcftools view -v snps,indels --threads ${cpu} ${input_gatk} | \
 tabix -f ${extension_path}_gatk.vcf.gz
 
 
-# Extract SNPs and Indels from the DeepVariant input file, normalize, filter non-homozygous ref variants and ./., and compress the output
+# Extract and normalize SNPs/Indels from DeepVariant, filter out homozygous ref and missing genotypes or missing metrics (DP=depth, AD=allele depth, GQ=genotype quality), and compress output
 bcftools view -v snps,indels --threads ${cpu} ${input_deepvariant} | \
     bcftools norm -m- --threads ${cpu} | \
-    bcftools view -v snps,indels -e 'GT="0/0" | GT="./."' --threads ${cpu} | \
+    bcftools view -v snps,indels -e 'GT="0/0" || GT="0|0" || GT="./." || GT=".|." || FMT/DP="." || FMT/AD="." || FMT/GQ="."' --threads ${cpu} | \
     bcftools norm -f ${fasta_ref} --threads ${cpu} | \
     bcftools view -Oz -o ${extension_path}_deepvariant.vcf.gz
 
