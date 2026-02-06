@@ -4,7 +4,7 @@
 #!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status, if an undefined variable is used, or if a command in a pipeline fails
-# set -euo pipefail
+set -euo pipefail
 
 
 # Define input arguments
