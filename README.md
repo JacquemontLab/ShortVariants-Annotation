@@ -78,6 +78,7 @@ The pipeline works with compressed gVCF files (`*gvcf.gz`).
 #### `sample_to_gvcf.tsv.gz`
 
 A **gzip-compressed, tab-separated file** that maps each `sampleID` to its corresponding file path.
+The gVCF files listed in Path must contain the **FORMAT fields GT, DP, AD, and GQ for each variant**. Variants missing any of these fields will be excluded during processing.
 
 **Example:**
 
