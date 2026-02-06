@@ -1,6 +1,9 @@
 # Use the Ensembl VEP release 113.3 image
 FROM ensemblorg/ensembl-vep:release_113.3
 
+# Switch to root to install system packages
+USER root
+
 # Install necessary system utilities
 RUN apt-get update && apt-get install -y \
     build-essential \
