@@ -46,7 +46,7 @@ extension_path=${tempdir_path}${sample}
 # Extract SNPs and Indels from the GATK input file, normalize, filter non-homozygous ref variants and ./., and compress the output
 bcftools view -v snps,indels --threads ${cpu} ${input_gatk} | \
     bcftools norm -m- --threads ${cpu} | \
-    bcftools view -v snps,indels -e 'GT="0/0" | GT="./."' --threads ${cpu} | \
+    bcftools view -v snps,indels -e 'GT="0/0" || GT="0|0" || GT="./." || GT=".|." || FMT/DP="." || FMT/AD="." || FMT/GQ="."' --threads ${cpu} | \
     bcftools norm -f ${fasta_ref} --threads ${cpu} | \
     bcftools view -Oz -o ${extension_path}_gatk.vcf.gz
 
