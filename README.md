@@ -235,6 +235,8 @@ For SPARK, it processes two gVCF files per sample and retains only their interse
 
 The gVCF files are filtered to retain only:
 
+-   Records containing all required FORMAT fields: **GT, DP, AD, and GQ**
+
 -   **Non Homozygous reference sites** — Removing `0/0` or `./.` to keep only variant sites.
   
   Some SNPs appear as `1/0` because they were originally multiallelic (e.g., `GT=2/3`) in the raw gVCF. After normalization, each alternate allele is represented separately, resulting in genotypes like `0/1` and `1/0`. As a result, the total depth (`DP`) may differ from the sum of `REF_AD` and `ALT_AD`.
