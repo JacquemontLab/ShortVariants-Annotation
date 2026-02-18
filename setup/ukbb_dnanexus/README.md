@@ -28,6 +28,7 @@ This will register the WDL as a **workflow** in your UKB-RAP DNAnexus project un
 ## Running a Workflow on UKB-RAP
 
 Running a workflow on the UK Biobank Research Analysis Platform (UKB-RAP) for a large cohort can be technically challenging. The workflow uses the `dxCompiler` language WDL, and I’ve been working on strategies such as **compressing files or directories to efficiently pass them between processes**.
+The pipeline was used to process **Whole Exome Sequencing gVCF**.
 
 ### Instance Type and Resources
 

@@ -26,8 +26,6 @@ parquet_output = sys.argv[2]  # Output Parquet file path
 cpus = int(sys.argv[3])  # Number of CPUs to use
 mem_per_cpu = int(sys.argv[4])  # Memory per CPU in GB
 
-temp_parquet = parquet_output + ".tmp"
-
 ######################   Initialize Spark session   #################################
 total_memory = cpus * mem_per_cpu  # Total memory in GB based on CPU count
 
@@ -54,14 +52,6 @@ find_command = f"find {tsv_dir_path} -type f -name '*.tsv.gz'"
 result = subprocess.run(find_command, shell=True, capture_output=True, text=True)
 subset_list_files = result.stdout.strip().split("\n") if result.stdout else []
 
-# Print found files and estimate processing duration
-print(f"Found {len(subset_list_files)} files:")
-total_seconds = len(subset_list_files) * 215.79 / 200
-total_minutes = total_seconds / 60
-total_hours = total_minutes / 60
-print(f"Estimated duration: {total_seconds:.2f} seconds ({total_minutes:.2f} minutes, {total_hours:.2f} hours)")
-
-
 # Start processing files
 start_time = time.time()
 first_file = True  # Flag to track first file processing
@@ -84,11 +74,11 @@ for file in tqdm(subset_list_files, desc="Processing files", unit="file", minite
 
     # Write to Parquet file (overwrite for the first file, append for the rest)        
     if first_file:
-        ShortVariants_type_data.write.mode("overwrite").parquet(temp_parquet)
+        ShortVariants_type_data.write.mode("overwrite").parquet(parquet_output)
         first_file = False
     else:
         # Save each file in append mode
-        ShortVariants_type_data.write.mode("append").parquet(temp_parquet)
+        ShortVariants_type_data.write.mode("append").parquet(parquet_output)
 
 
 # End timing
@@ -96,15 +86,5 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 
 # Final output messages
-print(f"Data successfully written to {temp_parquet}")
+print(f"Data successfully written to {parquet_output}")
 print(f"Total execution time: {elapsed_time:.2f} seconds")
-
-# Reorganize final dataset by partitioning on 'CHROM'
-all_ShortVariants_unannotated = spark.read.parquet(temp_parquet)
-
-all_ShortVariants_unannotated.write \
-    .mode("overwrite") \
-    .partitionBy("CHROM") \
-    .parquet(parquet_output)
-
-shutil.rmtree(temp_parquet)

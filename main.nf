@@ -39,7 +39,9 @@ process ProduceTSVPerSample {
 
     process_sample() {
         sample=\$1
-        input_gvcf=\$(grep "\${sample}" "file_path.tsv" | cut -f2)
+
+        # EXACT MATCH: Look for the sample in the first column and return the second
+        input_gvcf=\$(awk -v s="\$sample" '\$1 == s {print \$2; exit}' file_path.tsv)
 
         timedev -v bash -c "
             extraction_snps_indels_default.sh \
@@ -472,8 +474,9 @@ process buildSummary {
     # Calculate duration in seconds
     duration=\$(( end_sec - start_sec ))
 
-    # Convert duration to minutes and seconds
-    minutes=\$(( duration / 60 ))
+    # Convert duration to hours, minutes, seconds
+    hours=\$(( duration / 3600 ))
+    minutes=\$(( (duration % 3600) / 60 ))
     seconds=\$(( duration % 60 ))
 
     cat <<EOF > launch_report.txt
@@ -485,7 +488,7 @@ process buildSummary {
     input_file: ${input_file}
     launch_user: ${workflow.userName}
     start_time: ${workflow.start}
-    duration: \${minutes} minutes and \${seconds} seconds
+    duration: \${hours}h \${minutes}m \${seconds}s
 
     Command:
     ${workflow.commandLine}

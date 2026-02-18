@@ -235,6 +235,8 @@ For SPARK, it processes two gVCF files per sample and retains only their interse
 
 The gVCF files are filtered to retain only:
 
+-   Canonical Chromosomes (1-22, X, Y)
+
 -   Records containing all required FORMAT fields: **GT, DP, AD, and GQ**
 
 -   **Non Homozygous reference sites** — Removing `0/0` or `./.` to keep only variant sites.
