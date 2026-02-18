@@ -46,6 +46,9 @@ trap "rm -rf ${tempdir_path}" EXIT  # Ensure cleanup on exit
 # Create a directory for storing intermediate and final files
 extension_path=${tempdir_path}${sample}
 
+# Generate the index file (creates .tbi)
+bcftools index -t ${input_gvcf}
+
 # Extract and normalize SNPs/Indels, filter out homozygous ref and missing genotypes or missing metrics (DP=depth, AD=allele depth, GQ=genotype quality), and compress output
 bcftools view -v snps,indels -r chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chrX,chrY --threads ${cpu} ${input_gvcf} | \
     bcftools norm -m- --threads ${cpu} --force | \
