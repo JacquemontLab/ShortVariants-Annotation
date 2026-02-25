@@ -1,0 +1,36 @@
+
+// To launch the test on local :
+// nf-test test tests/main.nf.test --profile test,apptainer
+// Uncomment config and params to test on Rorqual and already have access to the containers and resources data
+
+nextflow_pipeline {
+
+    name "Test"
+    script "main.nf"
+    // config "setup/nextflow_HPC_slurm.config"
+
+    test("Full run should exit without errors") {
+
+        when {
+            params {
+                file_gvcf_path = "${projectDir}/tests/sample_to_gvcf.tsv.gz"
+                fasta_ref = "${projectDir}/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+                vep_cache = "${projectDir}/resources/vep_cache/"
+                // fasta_ref = "/lustre09/project/6008022/LAB_WORKSPACE/RAW_DATA/Genetic/Reference_Data/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz"
+                // vep_cache = "/lustre09/project/6008022/LAB_WORKSPACE/SOFTWARE/VEP/cache/"
+                dataset_name = "test"
+                batch_size = 3
+            } 
+        }
+
+        then {
+            assert workflow.success
+            assert path("$launchDir/results/test/ShortVariantsDB_curated.parquet").exists()
+            assert path("$launchDir/results/test/ShortVariantsDB_unfiltered.parquet").exists()
+            assert file("$launchDir/results/test/docs/launch_report.txt").exists()
+            assert file("$launchDir/results/test/docs/ShortVariantsDB_curated_columns_report.pdf").exists()
+            assert file("$launchDir/results/test/docs/ShortVariantsDB_unfiltered_columns_report.pdf").exists()
+        }
+    }
+}
+

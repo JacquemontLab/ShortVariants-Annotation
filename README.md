@@ -108,7 +108,7 @@ nextflow run main.nf -profile test,${container}
 
 ```bash
 file_gvcf_path=$PWD/tests/sample_to_gvcf.tsv.gz
-fasta_ref=$PWD/resources//reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz
+fasta_ref=$PWD/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz
 vep_cache=$PWD/resources/vep_cache/
 container=docker # or apptainer or singularity
 
