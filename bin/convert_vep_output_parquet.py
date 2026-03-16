@@ -143,8 +143,10 @@ elif plugin == "default":
     # Convert null AF value to 0
     merged_df = merged_df.fillna({'gnomAD_max_AF': 0.0})
     merged_df = merged_df.fillna({'MAX_AF': 0.0})
-
     
+# Create a unique identifier column using Location, Allele, Gene, and Feature
+merged_df = merged_df.withColumn("ID_variant_gene", concat_ws(":", col("Location"), col("Allele"), col("Gene"), col("Feature")))
+
 # Rename the 'Uploaded_variation' column to 'ID'
 merged_df = merged_df.withColumnRenamed("Uploaded_variation", "ID")
 

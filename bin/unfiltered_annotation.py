@@ -98,7 +98,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     for plugin_file in tqdm(list_plugins, desc="Processing Plugin"):
         plugins_parquet = spark.read.parquet(plugin_file)
         plugins_parquet = plugins_parquet.drop(*columns_to_exclude)  # Remove unwanted columns
-        vep_annotation_chr = vep_annotation_chr.join(plugins_parquet, on="ID", how="left")
+        vep_annotation_chr = vep_annotation_chr.join(plugins_parquet, on="ID_variant_gene", how="left")
     
     # Identify shared and unique IDs between datasets
     ShortVariants_ids = all_ShortVariants_unannotated_chr.select("ID")
@@ -122,7 +122,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     ShortVariants_annotated_chr = all_ShortVariants_unannotated_chr.join(vep_annotation_chr, on="ID", how="inner")
 
     # Drop useless columns
-    ShortVariants_annotated_chr = ShortVariants_annotated_chr.drop("Location", "Allele")
+    ShortVariants_annotated_chr = ShortVariants_annotated_chr.drop("ID_variant_gene", "Location", "Allele")
 
     # Write to Parquet file (overwrite for the first file, append for the rest)
     if first_file:
