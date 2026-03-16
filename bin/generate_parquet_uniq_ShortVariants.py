@@ -49,7 +49,7 @@ start_time = time.time()
 pyspk = spark.read.parquet(parquet_input)
 
 # Select unique variants based on chromosome, position, reference, and alternate alleles
-unique_variants = pyspk.select("CHROM", "POS", "REF", "ALT").distinct()
+unique_variants = pyspk.dropDuplicates(["ID"]).select("CHROM", "POS", "REF", "ALT","ID")
 
 # Count the number of unique variants per chromosome and sort by chromosome number
 print("Number of unique:", unique_variants.count())
@@ -70,7 +70,7 @@ vcf_df = (
     pyspk.select(
         F.col("CHROM").alias("CHROM"),
         F.col("POS").alias("POS"),
-        F.concat_ws("_", F.col("CHROM"), F.col("POS"), F.col("REF"), F.col("ALT")).alias("ID"),  # Placeholder
+        F.col("ID").alias("ID"),
         F.col("REF").alias("REF"),
         F.col("ALT").alias("ALT"),
         F.lit(".").alias("QUAL"),  # Placeholder

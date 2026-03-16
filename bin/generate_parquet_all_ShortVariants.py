@@ -72,6 +72,9 @@ for file in tqdm(subset_list_files, desc="Processing files", unit="file", minite
                                  .withColumn("ALT_AD", split(col("AD"), ",")[1].cast("int")) \
                                  .drop("AD")  # Drop original AD column if not needed
 
+    # Create a unique variant ID column
+    ShortVariants_type_data = ShortVariants_type_data.withColumn("ID", F.concat_ws("_", col("CHROM"), col("POS"), col("REF"), col("ALT")))
+
     # Write to Parquet file (overwrite for the first file, append for the rest)        
     if first_file:
         ShortVariants_type_data.write.mode("overwrite").parquet(parquet_output)
