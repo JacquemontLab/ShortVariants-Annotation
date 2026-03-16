@@ -89,7 +89,7 @@ for file in tqdm(subset_list_files, desc="Processing files", unit="file"):
     # Extract filename from the path and then the chromosome string (e.g., 'chr2')
     # This looks for the word starting with 'chr' followed by alphanumeric characters before the first dot
     ShortVariants_type_data = ShortVariants_type_data.withColumn(
-        "CHROM", 
+        "Chr", 
         regexp_extract(input_file_name(), r"(chr[A-Z0-9a-z]+)\.tsv\.gz", 1)
     )
 
@@ -157,7 +157,7 @@ merged_df.count()
 merged_df.show()
 
 # Save the final DataFrame as a Parquet file
-merged_df.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
+merged_df.write.partitionBy("Chr").parquet(parquet_output, mode="overwrite")
 
 
 # Calculate execution time

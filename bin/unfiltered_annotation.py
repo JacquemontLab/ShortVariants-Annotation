@@ -89,10 +89,10 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     print(f"Processing chromosome {chrom}")
     
     all_ShortVariants_unannotated_chr = all_ShortVariants_unannotated.filter(col("CHROM") == chrom)
-    vep_annotation_chr = vep_annotation.filter(col("CHROM") == chrom)
+    vep_annotation_chr = vep_annotation.filter(col("Chr") == chrom)
     
     # Columns to exclude from plugin files
-    columns_to_exclude = ["ID", "CHROM", "Location", "Allele", "Gene", "Feature"]
+    columns_to_exclude = ["ID", "Chr", "Location", "Allele", "Gene", "Feature"]
 
     # Load and merge plugin Parquet files
     for plugin_file in tqdm(list_plugins, desc="Processing Plugin"):
@@ -122,7 +122,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     ShortVariants_annotated_chr = all_ShortVariants_unannotated_chr.join(vep_annotation_chr, on="ID", how="inner")
 
     # Drop useless columns
-    ShortVariants_annotated_chr = ShortVariants_annotated_chr.drop("ID_variant_gene", "Location", "Allele")
+    ShortVariants_annotated_chr = ShortVariants_annotated_chr.drop("ID_variant_gene", "Chr", "Location", "Allele")
 
     # Write to Parquet file (overwrite for the first file, append for the rest)
     if first_file:
