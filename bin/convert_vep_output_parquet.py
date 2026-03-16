@@ -85,7 +85,14 @@ for file in tqdm(subset_list_files, desc="Processing files", unit="file"):
         .csv(file, header=False, inferSchema=True)
         .toDF(*last_header_line)  # Assign column names
     )
-    
+
+    # Extract filename from the path and then the chromosome string (e.g., 'chr2')
+    # This looks for the word starting with 'chr' followed by alphanumeric characters before the first dot
+    ShortVariants_type_data = ShortVariants_type_data.withColumn(
+        "CHROM", 
+        regexp_extract(input_file_name(), r"(chr[A-Z0-9a-z]+)\.tsv\.gz", 1)
+    )
+
     # Initialize merged DataFrame or merge with the existing one
     merged_df = ShortVariants_type_data if merged_df is None else merged_df.unionByName(ShortVariants_type_data)
 
@@ -137,9 +144,9 @@ elif plugin == "default":
     merged_df = merged_df.fillna({'gnomAD_max_AF': 0.0})
     merged_df = merged_df.fillna({'MAX_AF': 0.0})
 
-
-# Create a unique identifier column using Location, Allele, Gene, and Feature
-merged_df = merged_df.withColumn("ID", concat_ws(":", col("Location"), col("Allele"), col("Gene"), col("Feature")))
+    
+# Rename the 'Uploaded_variation' column to 'ID'
+merged_df = merged_df.withColumnRenamed("Uploaded_variation", "ID")
 
 
 # Display some output statistics
@@ -148,7 +155,7 @@ merged_df.count()
 merged_df.show()
 
 # Save the final DataFrame as a Parquet file
-merged_df.write.partitionBy("Uploaded_variation").parquet(parquet_output, mode="overwrite")
+merged_df.write.partitionBy("CHROM").parquet(parquet_output, mode="overwrite")
 
 
 # Calculate execution time

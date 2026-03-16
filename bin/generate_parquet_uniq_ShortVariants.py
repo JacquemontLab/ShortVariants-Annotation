@@ -70,7 +70,7 @@ vcf_df = (
     pyspk.select(
         F.col("CHROM").alias("CHROM"),
         F.col("POS").alias("POS"),
-        F.concat_ws(";", F.col("CHROM"), F.col("POS")).alias("ID"),  # Placeholder
+        F.concat_ws("_", F.col("CHROM"), F.col("POS"), F.col("REF"), F.col("ALT")).alias("ID"),  # Placeholder
         F.col("REF").alias("REF"),
         F.col("ALT").alias("ALT"),
         F.lit(".").alias("QUAL"),  # Placeholder
