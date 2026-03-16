@@ -92,7 +92,7 @@ for chrom in tqdm(chromosomes, desc="Processing chromosomes"):
     vep_annotation_chr = vep_annotation.filter(col("CHROM") == chrom)
     
     # Columns to exclude from plugin files
-    columns_to_exclude = ["Location", "Allele", "Gene", "Feature"]
+    columns_to_exclude = ["ID", "Location", "Allele", "Gene", "Feature"]
 
     # Load and merge plugin Parquet files
     for plugin_file in tqdm(list_plugins, desc="Processing Plugin"):
