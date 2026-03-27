@@ -287,9 +287,7 @@ Only unique short variants (SNVs and Indels) with an annotation of the given plu
 This is the most resources consuming step, it merges **`Unannotated_ShortVariants.parquet`** with plugin annotations.
 The output is **`ShortVariantsDB_unfiltered.parquet`**, partitioned by chromosome (**`UnFilteredAnnotation`** process).
 
-To reduce the size of the database, we removed:
-
--   **Short variants for which both MANE and CANONICAL annotations are null**
+To optimize the database size, **we retained only the primary transcripts by filtering out variants where both MANE and Canonical annotations were null**
 
 ### 8. Curating Annotation
 
