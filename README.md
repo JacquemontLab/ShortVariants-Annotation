@@ -64,6 +64,7 @@ This script performs the following tasks:
 
 | Parameter          | Description                                         | Default    |
 | ------------------ | --------------------------------------------------- | ---------- |
+| `--genome_version` | Human genome assembly version. (accepted: `GRCh38`\|`GRCh37`) | GRCh38     |
 | `--dataset_name`   | Name of the dataset, used for directory and report naming.    | dataset_default    |
 | `--file_gvcf_path` | A gzip-compressed, tab-separated file that maps each `sampleID` to its corresponding file path, see `Parameter Details`.    | *Required*    |
 | `--fasta_ref` | The downloaded `GRCh38_full_analysis_set_plus_decoy_hla.fa.gz`.    | *Required*    |
@@ -165,7 +166,7 @@ There are two output tables:
 | **Gene** | Gene Ensembl stable ID | Ensembl stable ID of affected gene. |
 | **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
 | **CANONICAL** | Canonical transcript | Indicates whether the transcript is the canonical transcript. |
-| **MANE** | Mane Transcript | Transcript is the MANE Select or MANE Plus Clinical transcript for the gene. |
+| **MANE** | Mane Transcript | Transcript is the MANE Select or MANE Plus Clinical transcript for the gene. ⚠️ __Only available in GRCh38__|
 | **dataset_AF** | Dataset Allele Frequency | Number of individual having the short variant (after QC filter) / 2 × the total number of individuals in the dataset. |
 | **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
 | **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
@@ -194,10 +195,10 @@ There are two output tables:
 | **Feature** | Transcript Ensembl stable ID | Ensembl stable ID of feature. |
 | **Consequence** | Variant consequence | Predicted functional consequence of the variant from VEP. |
 | **CANONICAL** | Canonical transcript | Indicates whether the transcript is the canonical transcript. |
-| **MANE** | MANE transcript | Indicates whether the transcript is a MANE Select or MANE Plus Clinical transcript. |
+| **MANE** | MANE transcript | Indicates whether the transcript is a MANE Select or MANE Plus Clinical transcript. ⚠️ __Only available in GRCh38__ |
 | **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
 | **MAX_AF_POPS** | Populations with maximum allele frequency | Population in which was found MAX_AF. |
-| **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
+| **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all available gnomAD exome and genome populations (gnomADe_* and gnomADg_*). ⚠️ Genome frequencies are only available for GRCh38 datasets. |
 | **SYMBOL** | SpliceAI SYMBOL | HGNC gene symbol. |
 | **DS_AG** | SpliceAI DS_AG | SpliceAI delta score for acceptor gain. |
 | **DS_AL** | SpliceAI DS_AL | SpliceAI delta score for acceptor loss. |
@@ -350,8 +351,8 @@ We used the VEP docker: ensembl-vep release_113.3
 
 
 ## Current Limitations of the pipeline
-- Only work for human reference genome version **GRCh38**, but can easly be adaptated for other version.
-Indeed the plugin resources used are provided for version **GRCh37** (except LoFtee).
+
+- Works well with **GRCh38**, for **GRCh37** the ref genome needs to be downloaded and the LoFtee plugin also. But look at the resources scripts commented lines.
 
 - Resource requirements of each step must be adjusted depending on the quantity of data analyzed.
 

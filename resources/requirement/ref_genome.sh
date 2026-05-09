@@ -43,4 +43,15 @@ bgzip -f "$FILENAME"  # `-f` overwrites if the file already exists
 # Index with samtools
 samtools faidx "$GZ_FILENAME"
 
+### GRCh37
+# wget https://hgdownload.gi.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz
+
+# gunzip hg19.fa.gz
+# module load htslib
+# bgzip -f hg19.fa
+# mv hg19.fa.gz GRCh37.fa.gz
+# module load samtools
+# samtools faidx GRCh37.fa.gz
+
+
 cd "$ORIG_DIR"

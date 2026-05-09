@@ -13,6 +13,7 @@ import psutil  # System and process utilities
 from math import floor  # For rounding down numbers
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, split, regexp_extract, input_file_name, expr, concat_ws, greatest
+from pyspark.sql.types import DoubleType
 import time
 from tqdm import tqdm  # Progress bar library
 
@@ -133,6 +134,12 @@ elif plugin == "default":
         "gnomADg_EAS_AF", "gnomADg_FIN_AF", "gnomADg_MID_AF", "gnomADg_NFE_AF", "gnomADg_REMAINING_AF",
         "gnomADg_SAS_AF"
     ]
+
+    for c in gnomad_cols:
+        merged_df = merged_df.withColumn(
+            c,
+            col(c).cast(DoubleType())
+        )
 
     # Create a new column with the max AF across all the gnomAD AF columns
     merged_df = merged_df.withColumn("gnomAD_max_AF", greatest(*[col(c) for c in gnomad_cols]))

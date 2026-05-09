@@ -206,6 +206,7 @@ process RunVEPDefault {
     val chrom
     path vcf_file
     path vep_cache
+    val genome_version
 
     output:
     path "default/${chrom}.tsv.gz", emit: tsv_vep
@@ -222,7 +223,7 @@ process RunVEPDefault {
     timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
             --dir_cache=${vep_cache}/ \
-            --assembly GRCh38 \
+            --assembly ${genome_version} \
             --force_overwrite --compress_output gzip --tab \
             --output_file default/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file default/${chrom}.txt \
@@ -242,6 +243,7 @@ process RunVEPLoftee {
     val chrom
     path vcf_file
     path vep_cache
+    val genome_version
 
     output:
     path "loftee/${chrom}.tsv.gz", emit: tsv_vep
@@ -258,12 +260,12 @@ process RunVEPLoftee {
     timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
             --dir_cache=${vep_cache}/ \
-            --assembly GRCh38 \
+            --assembly ${genome_version} \
             --force_overwrite --compress_output gzip --tab \
             --output_file loftee/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file loftee/${chrom}.txt \
-            --plugin LoF,loftee_path:${vep_cache}/ressources_loftee/loftee-1.0.4_GRCh38/ \
-            --dir_plugins ${vep_cache}/ressources_loftee/loftee-1.0.4_GRCh38/ \
+            --plugin LoF,loftee_path:${vep_cache}/ressources_loftee/loftee-1.0.4_${genome_version}/ \
+            --dir_plugins ${vep_cache}/ressources_loftee/loftee-1.0.4_${genome_version}/ \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,LoF,LoF_filter,LoF_flags,LoF_info" \
             --verbose
     """
@@ -279,6 +281,7 @@ process RunVEPAlphamissense {
     val chrom
     path vcf_file
     path vep_cache
+    val genome_version
 
     output:
     path "alphamissense/${chrom}.tsv.gz", emit: tsv_vep
@@ -287,6 +290,8 @@ process RunVEPAlphamissense {
 
 
     script:
+    // Select AlphaMissense resource according to genome build
+    def hg_genome_version = genome_version == "GRCh38" ? "hg38" : "hg19"
     """
     mkdir -p alphamissense/
 
@@ -295,11 +300,11 @@ process RunVEPAlphamissense {
     timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
             --dir_cache=${vep_cache}/ \
-            --assembly GRCh38 \
+            --assembly ${genome_version} \
             --force_overwrite --compress_output gzip --tab \
             --output_file alphamissense/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file alphamissense/${chrom}.txt \
-            --plugin AlphaMissense,file=${vep_cache}/ressources_alphamissense/AlphaMissense_hg38.tsv.gz \
+            --plugin AlphaMissense,file=${vep_cache}/ressources_alphamissense/AlphaMissense_${hg_genome_version}.tsv.gz \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,am_class,am_pathogenicity" \
             --verbose
     """
@@ -316,6 +321,7 @@ process RunVEPSpliceAI {
     val chrom
     path vcf_file
     path vep_cache
+    val genome_version
 
     output:
     path "spliceai/${chrom}.tsv.gz", emit: tsv_vep
@@ -324,6 +330,8 @@ process RunVEPSpliceAI {
 
 
     script:
+    // Select SpliceAI resource according to genome build
+    def hg_genome_version = genome_version == "GRCh38" ? "hg38" : "hg19"
     """
     mkdir -p spliceai/
 
@@ -332,11 +340,11 @@ process RunVEPSpliceAI {
     timedev -v vep -i ${vcf_file} --format vcf \
             --cache --offline --fork ${task.cpus} \
             --dir_cache=${vep_cache}/ \
-            --assembly GRCh38 \
+            --assembly ${genome_version} \
             --force_overwrite --compress_output gzip --tab \
             --output_file spliceai/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file spliceai/${chrom}.txt \
-            --plugin SpliceAI,snv=${vep_cache}/ressources_spliceai/spliceai_scores.raw.snv.hg38.vcf.gz,indel=${vep_cache}/ressources_spliceai/spliceai_scores.raw.indel.hg38.vcf.gz \
+            --plugin SpliceAI,snv=${vep_cache}/ressources_spliceai/spliceai_scores.raw.snv.${hg_genome_version}.vcf.gz,indel=${vep_cache}/ressources_spliceai/spliceai_scores.raw.indel.${hg_genome_version}.vcf.gz \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,SpliceAI_pred" \
             --verbose
     """
@@ -458,6 +466,7 @@ process buildSummary {
     val input_file
     val git_hash
     val cohort_tag
+    val genome_version
     path last_outfile
 
     output:
@@ -486,6 +495,7 @@ process buildSummary {
     configs: ${workflow.configFiles}
     workDir: ${workflow.workDir}
     input_file: ${input_file}
+    genome_version: ${genome_version}
     launch_user: ${workflow.userName}
     start_time: ${workflow.start}
     duration: \${hours}h \${minutes}m \${seconds}s
@@ -508,6 +518,7 @@ process buildSummary {
 
 // Parameters
 params.dataset_name = "dataset_default"
+params.genome_version = "GRCh38"
 params.file_gvcf_path = ""
 params.fasta_ref      = ""
 params.vep_cache      = ""
@@ -576,10 +587,10 @@ workflow {
             }
 
         // Run VEP annotations
-        RunVEPDefault(      chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
-        RunVEPLoftee(       chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
-        RunVEPAlphamissense(chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
-        RunVEPSpliceAI(     chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache )
+        RunVEPDefault(      chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache, genome_version= params.genome_version )
+        RunVEPLoftee(       chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache, genome_version= params.genome_version )
+        RunVEPAlphamissense(chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache, genome_version= params.genome_version )
+        RunVEPSpliceAI(     chrom= vcf_ch.map{it[0]}, vcf_file= vcf_ch.map{it[1]}, vep_cache= params.vep_cache, genome_version= params.genome_version )
 
         // Convert VEP outputs to Parquet
         default_parquet_ch = ConvertVEPDefaultParquet('default', RunVEPDefault.out.tsv_vep.collect())
@@ -611,6 +622,7 @@ workflow {
         buildSummary  ( params.file_gvcf_path,
                         params.git_hash,
                         params.dataset_name,
+                        params.genome_version,
                         ProduceSummaryPDF_Unfiltered.out
                     )
 
