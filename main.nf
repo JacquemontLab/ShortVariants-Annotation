@@ -23,11 +23,12 @@ process ProduceTSVPerSample {
     """
     echo "Using ${task.cpus} CPUs"
 
-    # find file name
-    # Create a list of actual files in that directory
-    ls *.gz | xargs -n1 basename > actual_files.txt
-
-    # Filter the TSV to filenames that exist
+    # Create a list of actual files in the directory, prefixing each filename with a tab
+    # to ensure exact field matching during grep (-Ff), avoiding substring collisions
+    ls *.gz | xargs -n1 basename | sed 's/^/\\t/' > actual_files.txt
+    
+    # Generate a tab-prefixed list of filenames to enforce exact column-boundary matching
+    # when using grep -Ff (prevents substring matches between similar filenames)
     zcat "${file_gvcf_path}" | awk 'NR==1 {print \$1"\\t"\$2; next} {n=split(\$2,a,"/"); print \$1"\\t"a[n]}' \
         | grep -Ff actual_files.txt > file_path.tsv
 
