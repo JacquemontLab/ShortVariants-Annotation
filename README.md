@@ -39,18 +39,23 @@ You might need to pull the following containers if working **offline** (see temp
 
 ### Download resources
 
-All required pipeline resources (e.g. reference genome, VEP cache, annotation resources) can be downloaded using the provided setup script:
+All required pipeline resources for the selected genome build (GRCh37 and GRCh38 only) can be downloaded using the provided setup script:
 ⚠️ This process can take more than 1 hour.
 
 It will require tabix and samtools installed on the system. The BaseSpace CLI will be installed automatically for downloading SpliceAI resources.
+From the root directory of the repository, run the following command (tabix and requirement should be provided by the Docker image):
 
 ```bash
-bash INSTALL.sh GRCh37
+docker run --rm -it \
+  -v "$PWD":/ShortVariants-Annotation \
+  -w /ShortVariants-Annotation \
+  ghcr.io/jacquemontlab/install_sv:latest \
+  bash INSTALL.sh GRCh38
 ```
 
 This script performs the following tasks:
 
-* Downloads the reference genome (GRCh38 by default)
+* Downloads the reference genome
 * Retrieves necessary annotation resources:
   * VEP cache
   * AlphaMissense data
@@ -67,8 +72,8 @@ This script performs the following tasks:
 | `--genome_version` | Human genome assembly version. (accepted: `GRCh38`\|`GRCh37`) | GRCh38     |
 | `--dataset_name`   | Name of the dataset, used for directory and report naming.    | dataset_default    |
 | `--file_gvcf_path` | A gzip-compressed, tab-separated file that maps each `sampleID` to its corresponding file path, see `Parameter Details`.    | *Required*    |
-| `--fasta_ref` | The downloaded `GRCh38_full_analysis_set_plus_decoy_hla.fa.gz`.    | *Required*    |
-| `--vep_cache` | The downloaded directory `resources/vep_cache/`.    | *Required*    |
+| `--ref_genome_dir` | The directory containing fasta reference genome.    | ${projectDir}/resources/reference_genome    |
+| `--vep_cache` | The downloaded directory `resources/vep_cache/`.    |  ${projectDir}/resources/vep_cache   |
 | `--batch_size` | Number of samples call in a single batch.    | 64    |
 
 
@@ -80,6 +85,7 @@ The pipeline works with compressed gVCF files (`*gvcf.gz`).
 
 A **gzip-compressed, tab-separated file** that maps each `sampleID` to its corresponding file path.
 The gVCF files listed in Path must contain the **FORMAT fields GT, DP, AD, and GQ for each variant**. Variants missing any of these fields will be excluded during processing.
+`CHROM` should be formatted as `"chr1"`–`"chr22"`, `"chrX"`, or `"chrY"`
 
 **Example:**
 
@@ -96,28 +102,32 @@ DXXXXX	    /absolute/path/to/sample_D.gvcf.gz
 
 ### Testing
 
-The pipeline can be tested using the test profile and the images hosted on github using the container platform of your choice.
+The pipeline can be tested using the test profile and the images hosted on github using the container platform of your choice (10min for 64 CPUs).
 Unfortunately, the test will fail at the Curated steps because it uses a small test dataset. Those, allele frequency (AF) filtering will remove all the short variants.
 
 ```bash
 container=docker # or apptainer or singularity
 
-nextflow run main.nf -profile test,${container}
+genome_version=GRCh38 # or GRCh37
+
+nextflow run main.nf -profile test_${genome_version},${container}
 ```
 
 ### Example
 
 ```bash
+genome_version=GRCh38
 file_gvcf_path=$PWD/tests/sample_to_gvcf.tsv.gz
-fasta_ref=$PWD/resources/reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.gz
-vep_cache=$PWD/resources/vep_cache/
+ref_genome_dir=$PWD/resources/reference_genome
+vep_cache=$PWD/resources/vep_cache
 container=docker # or apptainer or singularity
 
 nextflow run main.nf \
     --dataset_name Dataset \
     --file_gvcf_path "$file_gvcf_path" \
-    --fasta_ref "$fasta_ref" \
+    --ref_genome_dir "$ref_genome_dir" \
     --vep_cache "$vep_cache" \
+    --genome_version "$genome_version" \
     --batch_size 16 \
     -profile ${container}
 ```
@@ -168,7 +178,7 @@ There are two output tables:
 | **CANONICAL** | Canonical transcript | Indicates whether the transcript is the canonical transcript. |
 | **MANE** | Mane Transcript | Transcript is the MANE Select or MANE Plus Clinical transcript for the gene. ⚠️ __Only available in GRCh38__|
 | **dataset_AF** | Dataset Allele Frequency | Number of individual having the short variant (after QC filter) / 2 × the total number of individuals in the dataset. |
-| **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all gnomAD population (exome and genome). |
+| **gnomAD_max_AF** | Maximum allele frequency across gnomAD | Maximum AF across all available gnomAD exome and genome populations (gnomADe_* and gnomADg_*). ⚠️ Genome frequencies are only available for GRCh38 datasets. |
 | **MAX_AF** | Maximum allele frequency across populations | Maximum observed allele frequency in 1000 Genomes, ESP and gnomAD. |
 | **MAX_AF_POPS** | Populations with maximum allele frequency | Population in which was found MAX_AF. |
 | **Variant_Type** | Type of variant | Functional impact classification of the variant. |
@@ -352,7 +362,7 @@ We used the VEP docker: ensembl-vep release_113.3
 
 ## Current Limitations of the pipeline
 
-- Works well with **GRCh38**, for **GRCh37** the ref genome needs to be downloaded and the LoFtee plugin also. But look at the resources scripts commented lines.
+- Works well with **GRCh38** and **GRCh37** .
 
 - Resource requirements of each step must be adjusted depending on the quantity of data analyzed.
 

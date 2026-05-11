@@ -4,7 +4,7 @@ FROM ubuntu:22.04
 # Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies for CNV-Annotation
+# Install system dependencies for ShortVariants-Annotation
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y \
     bcftools \
     bgzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Set working directory for ShortVariants-Annotation
+WORKDIR /ShortVariants-Annotation
+
 
 # Default command
 CMD ["/bin/bash"]

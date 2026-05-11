@@ -265,8 +265,8 @@ process RunVEPLoftee {
             --force_overwrite --compress_output gzip --tab \
             --output_file loftee/${chrom}.tsv.gz \
             --stats_text --stats_html --stats_file loftee/${chrom}.txt \
-            --plugin LoF,loftee_path:${vep_cache}/ressources_loftee/loftee-1.0.4_${genome_version}/ \
-            --dir_plugins ${vep_cache}/ressources_loftee/loftee-1.0.4_${genome_version}/ \
+            --plugin LoF,loftee_path:${vep_cache}/ressources_loftee/loftee_${genome_version}/ \
+            --dir_plugins ${vep_cache}/ressources_loftee/loftee_${genome_version}/ \
             --fields "Uploaded_variation,Location,Allele,Gene,Feature,LoF,LoF_filter,LoF_flags,LoF_info" \
             --verbose
     """
@@ -517,12 +517,15 @@ process buildSummary {
 
 
 
-// Parameters
-params.dataset_name = "dataset_default"
+// Default VEP dir following install script
+params.vep_cache = "${projectDir}/resources/vep_cache"
+params.ref_genome_dir = "${projectDir}/resources/reference_genome"
+
+// Default Parameters
 params.genome_version = "GRCh38"
+params.dataset_name   = "dataset_default"
 params.file_gvcf_path = ""
-params.fasta_ref      = ""
-params.vep_cache      = ""
+params.fasta_ref      = params.ref_genome_dir + "/ref_genome_" + params.genome_version + ".fa.gz"
 
 params.batch_size = 64
 params.git_hash = "git -C ${projectDir} rev-parse HEAD".execute().text.trim()
@@ -530,10 +533,14 @@ params.batch_num = -1 // for tuning batch sizes: default -1 means take all batch
                       // Any other number restricts the execution to N number of batches  
 
 workflow {
+    // Log basic configuration
+    log.info "Using genome version: ${params.genome_version}"
+    log.info "VEP cache directory: ${params.vep_cache}"
+    log.info "Fasta genome reference: ${params.fasta_ref}"
 
     main:
         params.fasta_ref_index = params.fasta_ref + ".gzi"
-        params.fasta_ref_fai = params.fasta_ref + ".fai"
+        params.fasta_ref_fai   = params.fasta_ref + ".fai"
 
         // Read TSV listing gVCF paths
         sample_file_ch  = channel.fromPath(params.file_gvcf_path)

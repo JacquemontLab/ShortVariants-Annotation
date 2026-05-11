@@ -32,7 +32,7 @@ if [[ "$GENOME_VERSION" != "GRCh37" && "$GENOME_VERSION" != "GRCh38" ]]; then
     exit 1
 fi
 
-echo "📥 Downloading LOFTEE resources for $GENOME_VERSION"
+echo "📥 Downloading LoFTEE resources for $GENOME_VERSION"
 
 # ============================
 # Set paths
@@ -53,14 +53,15 @@ elif [ "$GENOME_VERSION" == "GRCh37" ]; then
 fi
 
 wget -c "https://github.com/konradjk/loftee/archive/refs/tags/$LOFTEE_TAR"
-tar -xvzf "$LOFTEE_TAR"
+tar -xzf "$LOFTEE_TAR"
 rm "$LOFTEE_TAR"
 
 # Rename extracted directory
 if [ "$GENOME_VERSION" == "GRCh38" ]; then
-    LOFTEE_DIR="loftee-1.0.4_GRCh38"
+    LOFTEE_DIR="loftee_GRCh38"
+    mv loftee-1.0.4_GRCh38/ "$LOFTEE_DIR"
 elif [ "$GENOME_VERSION" == "GRCh37" ]; then
-    LOFTEE_DIR="loftee-1.0.4_GRCh37"
+    LOFTEE_DIR="loftee_GRCh37"
     mv loftee-1.0.4_GRCh38/ "$LOFTEE_DIR"
 fi
 

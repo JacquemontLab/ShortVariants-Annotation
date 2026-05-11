@@ -51,7 +51,7 @@ wget -q "https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs" -O bs
 chmod +x bs
 
 echo "🔑 Please authenticate BaseSpace CLI (this may open an interactive prompt)..."
-./bs auth
+./bs auth --force
 
 # ============================
 # Download SpliceAI VCFs
@@ -70,7 +70,11 @@ for ext in "${EXTENSIONS[@]}"; do
 done
 
 # Move downloaded files to SpliceAI resources folder
-mv genome_scores_v1.3_ds.20a701bc58ab45b59de2576db79ac8d0 "$SPLICEAI_DIR"
+mv genome_scores_v1.3_ds.20a701bc58ab45b59de2576db79ac8d0/* ressources_spliceai
+
+# Clean Files unneeded
+rm -rf genome_scores_v1.3_ds.20a701bc58ab45b59de2576db79ac8d0/
+rm Predictingsplicingfromprimarysequence_66029966.json
 
 # Cleanup BaseSpace CLI
 rm bs
