@@ -68,3 +68,12 @@ jobs:
           push: true
           tags: ghcr.io/jacquemontlab/ensembl_vep_113.3:latest
       
+      
+      - name: Build install_sv
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./resources/dockerfiles/Dockerfile_install_sv
+          push: true
+          tags: ghcr.io/jacquemontlab/install_sv:latest
+      
