@@ -1,57 +1,77 @@
 #!/bin/bash
-# Florian Bénitière 16/03/2025
+# Florian Bénitière 11/05/2026
 # Download, bgzip-compress, and index GRCh38 reference genome for VEP pipelines
+# Usage: ./ref_genome.sh <genome_version>
+# Example: ./ref_genome.sh GRCh37
 
-# Check if htslib is available
-if ! command -v htslib &> /dev/null; then
-    echo "htslib not found — loading module..."
-    module load htslib
-else
-    echo "htslib already available."
+set -e
+set -o pipefail
+
+# ============================
+# Check argument
+# ============================
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <genome_version>"
+    echo "Example: $0 GRCh37"
+    exit 1
 fi
 
-# Check if samtools is available
-if ! command -v htslib &> /dev/null; then
-    echo "samtools not found — loading module..."
-    module load samtools
-else
-    echo "samtools already available."
+GENOME_VERSION="$1"
+if [[ "$GENOME_VERSION" != "GRCh37" && "$GENOME_VERSION" != "GRCh38" ]]; then
+    echo "❌ Invalid genome version. Use 'GRCh37' or 'GRCh38'."
+    exit 1
 fi
 
+echo "📥 Preparing reference genome for $GENOME_VERSION..."
 
+
+# ============================
+# Check dependencies
+# ============================
+for cmd in samtools bgzip; do
+    if ! command -v $cmd &> /dev/null; then
+        echo "❌ $cmd is not available"
+    fi
+done
+
+echo "✅ samtools, bgzip are available"
+
+
+# ============================
+# Set URLs and filenames
+# ============================
 ORIG_DIR=$(pwd)
-
-# Define variables
-URL="https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa"
-OUTDIR="resources/reference_genome/"  # 🔁 Replace with your desired output directory
-
-FILENAME=$(basename "$URL")  # GRCh38_full_analysis_set_plus_decoy_hla.fa
-GZ_FILENAME="${FILENAME}.gz"  # GRCh38_full_analysis_set_plus_decoy_hla.fa.gz
-
-# Create output directory if needed
+OUTDIR="resources/reference_genome/"
 mkdir -p "$OUTDIR"
 
-# Download the FASTA file
-wget -c "$URL" -P "$OUTDIR"
+REF_FILENAME="ref_genome_${GENOME_VERSION}.fa"
+GZ_FILENAME="${REF_FILENAME}.gz"
 
-# Change to output directory
+if [ "$GENOME_VERSION" == "GRCh38" ]; then
+    URL="https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa"
+elif [ "$GENOME_VERSION" == "GRCh37" ]; then
+    URL="https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz"
+fi
+
+# ============================
+# Download and prepare genome
+# ============================
 cd "$OUTDIR"
 
-# Compress the FASTA file
-bgzip -f "$FILENAME"  # `-f` overwrites if the file already exists
+if [ "$GENOME_VERSION" == "GRCh38" ]; then
+    wget -c "$URL"
+    ORIGINAL_FILE=$(basename "$URL")  # GRCh38_full_analysis_set_plus_decoy_hla.fa
+    mv "$ORIGINAL_FILE" "$REF_FILENAME"
+    bgzip -f "$REF_FILENAME"
+    samtools faidx "$GZ_FILENAME"
+elif [ "$GENOME_VERSION" == "GRCh37" ]; then
+    wget -c "$URL"
+    gunzip -f hg19.fa.gz
+    mv hg19.fa "$REF_FILENAME"
+    bgzip -f "$REF_FILENAME"
+    samtools faidx "$GZ_FILENAME"
+fi
 
-# Index with samtools
-samtools faidx "$GZ_FILENAME"
-
-### GRCh37
-# wget https://hgdownload.gi.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz
-
-# gunzip hg19.fa.gz
-# module load htslib
-# bgzip -f hg19.fa
-# mv hg19.fa.gz GRCh37.fa.gz
-# module load samtools
-# samtools faidx GRCh37.fa.gz
-
+echo "✅ Reference genome $GENOME_VERSION prepared as $GZ_FILENAME in $OUTDIR"
 
 cd "$ORIG_DIR"

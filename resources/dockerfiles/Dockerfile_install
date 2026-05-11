@@ -1,0 +1,22 @@
+# Base image with bash
+FROM ubuntu:22.04
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies for CNV-Annotation
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    perl \
+    tabix \
+    wget \
+    unzip \
+    gzip \
+    tar \
+    bcftools \
+    bgzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Default command
+CMD ["/bin/bash"]

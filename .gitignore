@@ -7,3 +7,5 @@ test-data/
 .nextflow.log*
 *.log
 env/
+resources/reference_genome/
+resources/vep_cache/

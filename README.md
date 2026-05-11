@@ -45,7 +45,7 @@ All required pipeline resources (e.g. reference genome, VEP cache, annotation re
 It will require tabix and samtools installed on the system. The BaseSpace CLI will be installed automatically for downloading SpliceAI resources.
 
 ```bash
-bash INSTALL.sh
+bash INSTALL.sh GRCh37
 ```
 
 This script performs the following tasks:

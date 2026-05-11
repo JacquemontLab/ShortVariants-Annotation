@@ -1,33 +1,75 @@
 #!/bin/bash
-# Florian Bénitière 16/03/2025
-# This script downloads and indexes AlphaMissense annotation files for VEP.
+# ================================================
+# Script: get_alphamissense_resources.sh
+# Author: Florian Bénitière
+# Date: 11/05/2026
+#
+# Description:
+#   Downloads and indexes AlphaMissense annotation files for VEP.
+#   Supports genome versions GRCh37 (hg19) and GRCh38 (hg38).
+#   Indexes files with tabix.
+#
+# Usage:
+#   ./get_alphamissense_resources.sh <genome_version>
+#   Example: ./get_alphamissense_resources.sh GRCh38
+# ================================================
 
-# It creates a dedicated directory for resources, fetches the necessary data 
-# for GRCh38 (hg38) assembly (command lines commented for GRCh37 (hg19)), and indexes them using tabix.
-# Ensure that 'tabix' is available in your environment before running this script.
+set -e
+set -o pipefail
 
-
-# Check if tabix is available
-if ! command -v tabix &> /dev/null; then
-    echo "tabix not found — loading module..."
-    module load tabix
-else
-    echo "tabix already available."
+# ============================
+# Check argument
+# ============================
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <genome_version>"
+    echo "Example: $0 GRCh38"
+    exit 1
 fi
 
+GENOME_VERSION="$1"
+if [[ "$GENOME_VERSION" != "GRCh37" && "$GENOME_VERSION" != "GRCh38" ]]; then
+    echo "❌ Invalid genome version. Use 'GRCh37' or 'GRCh38'."
+    exit 1
+fi
+
+echo "📥 Downloading AlphaMissense resources for $GENOME_VERSION"
+
+# ============================
+# Check tabix
+# ============================
+if ! command -v tabix >/dev/null 2>&1; then
+    echo "❌ tabix not available."
+    exit 1
+else
+    echo "✅ tabix is available"
+fi
+
+# ============================
+# Set paths
+# ============================
 ORIG_DIR=$(pwd)
+BASE_DIR="resources/vep_cache/ressources_alphamissense"
+mkdir -p "$BASE_DIR"
+cd "$BASE_DIR"
 
-path_project=resources/vep_cache/
-mkdir -p $path_project/ressources_alphamissense
-cd $path_project/ressources_alphamissense
+# ============================
+# Download and index AlphaMissense
+# ============================
+if [ "$GENOME_VERSION" == "GRCh38" ]; then
+    FILE="AlphaMissense_hg38.tsv.gz"
+    URL="https://storage.googleapis.com/dm_alphamissense/$FILE"
+elif [ "$GENOME_VERSION" == "GRCh37" ]; then
+    FILE="AlphaMissense_hg19.tsv.gz"
+    URL="https://storage.googleapis.com/dm_alphamissense/$FILE"
+fi
 
-# Download files to run AlphaMissense
-wget https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg38.tsv.gz
-tabix -s 1 -b 2 -e 2 -f -S 1 AlphaMissense_hg38.tsv.gz
+echo "🔽 Downloading $FILE..."
+wget -c "$URL"
 
-# For GRCh37
-# wget https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg19.tsv.gz
-# tabix -s 1 -b 2 -e 2 -f -S 1 AlphaMissense_hg19.tsv.gz
+echo "🔧 Indexing $FILE with tabix..."
+tabix -s 1 -b 2 -e 2 -f -S 1 "$FILE"
 
+echo "✅ AlphaMissense resources for $GENOME_VERSION are ready in $BASE_DIR"
 
+# Return to original directory
 cd "$ORIG_DIR"
