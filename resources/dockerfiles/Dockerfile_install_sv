@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     gzip \
     tar \
     bcftools \
+    samtools \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory for ShortVariants-Annotation
