@@ -53,7 +53,7 @@ fi
 # ============================
 CACHE_TAR=$(basename "$VEP_CACHE_URL")
 
-curl -O "$VEP_CACHE_URL"
+wget -O "$CACHE_TAR" "$VEP_CACHE_URL"
 tar xzf "$CACHE_TAR"
 rm -f "$CACHE_TAR"
 
